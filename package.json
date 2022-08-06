@@ -9,19 +9,35 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@perp/common": "0.1.12",
     "bootstrap": "^5.2.0",
+    "dotenv": "^16.0.1",
+    "methods": "^1.1.2",
     "next": "12.2.4",
     "react": "18.2.0",
     "react-bootstrap": "^2.4.0",
     "react-dom": "18.2.0",
-    "sass": "^1.54.3"
+    "sass": "^1.54.3",
+    "uid": "^2.0.0"
   },
   "devDependencies": {
+    "@typechain/ethers-v5": "7.0.1",
+    "@types/big.js": "6.1.1",
+    "@types/lodash": "4.14.171",
     "@types/node": "18.6.4",
+    "@types/node-fetch": "2.5.12",
     "@types/react": "18.0.15",
     "@types/react-dom": "18.0.6",
     "eslint": "8.21.0",
     "eslint-config-next": "12.2.4",
+    "import-sort-style-module": "6.0.0",
+    "prettier": "2.3.2",
+    "prettier-plugin-import-sort": "0.0.7",
+    "serverless": "3.18.2",
+    "serverless-plugin-log-retention": "2.0.0",
+    "serverless-webpack": "5.7.0",
+    "ts-node": "10.1.0",
+    "typechain": "5.1.2",
     "typescript": "4.7.4"
   }
 }

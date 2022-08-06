@@ -1,27 +1,47 @@
 import type { NextPage } from 'next'
+import { FormEventHandler, useState } from 'react'
 import { Button, Col, Container, Form, Row } from 'react-bootstrap'
 import { Header } from '../components/Header/Header'
-
-/*
-"PRICE_CHECK_INTERVAL_SEC": 5,
-    "ADJUST_MAX_GAS_PRICE_GWEI": 500,
-    "MARKET_MAP": {
-        "vBTC": {
-            "IS_ENABLED": true,
-            "LIQUIDITY_AMOUNT": 2000,
-            "LIQUIDITY_RANGE_OFFSET": 0.5,
-            "LIQUIDITY_ADJUST_THRESHOLD": 1
-        },
-        "vPERP": {
-            "IS_ENABLED": true,
-            "LIQUIDITY_AMOUNT": 2000,
-            "LIQUIDITY_RANGE_OFFSET": 0.5,
-            "LIQUIDITY_ADJUST_THRESHOLD": 1
-        }
-    }
-* */
+import { LiquidityBotConfig } from '../types'
 
 const Home: NextPage = () => {
+    const [loading, setIsLoading] = useState(false)
+
+    const handleSubmit: FormEventHandler<HTMLFormElement> = (e) => {
+        e.preventDefault();
+
+        const config: LiquidityBotConfig = {
+            //@ts-ignore
+            privateKey: e.target?.private_key.value,
+            //@ts-ignore
+            priceCheckInterval: e.target?.price_check_interval.value,
+            //@ts-ignore
+            adjustMaxGasPriceGwei: e.target?.max_gas_price.value,
+            //@ts-ignore
+            marketMap: {
+                //@ts-ignore
+                [e.target?.pair_name.value]: {
+                    isEnabled: true,
+                    //@ts-ignore
+                    liquidityAmount: e.target?.liquidity_amount.value,
+                    //@ts-ignore
+                    liquidityRangeOffset: e.target?.liquidity_range.value,
+                    //@ts-ignore
+                    liquidityAdjustThreshold: e.target?.liquidity_threshold.value,
+                }
+            }
+        }
+
+        setIsLoading(true);
+
+        fetch('/api/bot', {
+            method: 'POST',
+            body: JSON.stringify(config)
+        }).then(() => {
+            setIsLoading(false)
+        })
+    }
+
     return (
         <>
             <Header />
@@ -32,43 +52,93 @@ const Home: NextPage = () => {
                         md={{ span: 8, offset: 2 }}
                         xl={{ span: 4, offset: 4 }}
                     >
-                        <Form>
-                            <Form.Group className="mb-3" controlId="formBasicEmail">
-                                <Form.Label>Price check interval (sec)</Form.Label>
+                        <Form onSubmit={handleSubmit}>
+                            <Form.Group className="mb-3" controlId="private_key">
+                                <Form.Label>Private key</Form.Label>
                                 <Form.Control
+                                    required
                                     min={0}
-                                    type="number"
-                                    placeholder="Interval"
+                                    type="string"
+                                    name="private_key"
+                                    placeholder="#00000000000000000000000000000000"
                                 />
                             </Form.Group>
-                            <Form.Group className="mb-3" controlId="formBasicPassword">
+                            <Form.Group className="mb-3" controlId="price_check_interval">
+                                <Form.Label>Price check interval</Form.Label>
+                                <Form.Control
+                                    required
+                                    min={0}
+                                    type="number"
+                                    name="price_check_interval"
+                                    placeholder="100 sec"
+                                />
+                            </Form.Group>
+                            <Form.Group className="mb-3" controlId="pair_name">
                                 <Form.Label>Pair</Form.Label>
-                                <Form.Select>
+                                <Form.Select required name="pair_name">
                                     <option>vBTC</option>
                                     <option>vPERP</option>
                                 </Form.Select>
                             </Form.Group>
-                            <Form.Group className="mb-3" controlId="formBasicPassword">
-                                <Form.Label>Max gas price (gwey)</Form.Label>
-                                <Form.Control type="number" min={0} placeholder="Gas price" />
+                            <Form.Group className="mb-3" controlId="max_gas_price">
+                                <Form.Label>Max gas price</Form.Label>
+                                <Form.Control
+                                    required
+                                    min={0}
+                                    type="number"
+                                    placeholder="200 gwey"
+                                    name="gas_price"
+                                />
                             </Form.Group>
-                            {/*<Form.Group>*/}
-                            {/*    <Form.Check id="Check" label="Auto" />*/}
-                            {/*</Form.Group>*/}
-                            <Form.Group className="mb-3" controlId="formBasicPassword">
+                            <Form.Group className="mb-3" controlId="liquidity_amount">
                                 <Form.Label>Liquidity amount</Form.Label>
-                                <Form.Control type="number" min={0} placeholder="Amount" />
+                                <Form.Control
+                                    required
+                                    min={0}
+                                    type="number"
+                                    placeholder="2000 usdc"
+                                    name="liquidity_amount"
+                                />
                             </Form.Group>
-                            <Form.Group className="mb-3" controlId="formBasicPassword">
+                            <Form.Group className="mb-3" controlId="liquidity_range">
                                 <Form.Label>Liquidity range offset</Form.Label>
-                                <Form.Control type="number" min={0} placeholder="Offset" />
+                                <Form.Control
+                                    required
+                                    step="0.01"
+                                    min={0}
+                                    type="number"
+                                    placeholder="0.4"
+                                    name="liquidity_range"
+                                />
+                                <small id="liquidity_range_help" className="form-text text-muted">
+                                    [current_price / (1 + offset), current price * (1 + offset)]
+                                </small>
                             </Form.Group>
-                            <Form.Group className="mb-3" controlId="formBasicPassword">
+                            <Form.Group className="mb-3" controlId="liquidity_threshold">
                                 <Form.Label>Liquidity adjust threshold</Form.Label>
-                                <Form.Control type="number" min={0} placeholder="Threshold" />
+                                <Form.Control
+                                    required
+                                    step="0.01"
+                                    min={0}
+                                    type="number"
+                                    name="liquidity_threshold"
+                                    placeholder="Threshold"
+                                />
+                                <small id="liquidity_range_help" className="form-text text-muted">
+                                    [market price / (1 + treshold), market price * (1 + treshold)]
+                                </small>
                             </Form.Group>
-                            <Button variant="primary" type="submit">
-                                Provide liquidity
+                            <Button disabled={loading} variant="primary" type="submit">
+                                {
+                                    loading
+                                        ? (
+                                            <>
+                                                <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                                <span className="sr-only">Loading...</span>
+                                            </>
+                                        )
+                                        : "Provide liquidity"
+                                }
                             </Button>
                         </Form>
                     </Col>
