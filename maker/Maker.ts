@@ -7,7 +7,7 @@ import Big from "big.js"
 import { ethers } from "ethers"
 import { Service } from "typedi"
 
-import { LiquidityBotConfig, Market } from '../types'
+import { LiquidityBotConfig, Market } from '../common/types'
 
 @Service()
 export class Maker extends BotService {

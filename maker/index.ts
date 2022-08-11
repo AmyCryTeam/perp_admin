@@ -3,7 +3,7 @@ import dotenv from "dotenv"
 import { Log, initLog } from "@perp/common/build/lib/loggers"
 import { Container } from "typedi"
 import { uid } from 'uid';
-import { LiquidityBotConfig } from '../types'
+import { LiquidityBotConfig } from '../common/types'
 
 import { Maker } from "./Maker"
 

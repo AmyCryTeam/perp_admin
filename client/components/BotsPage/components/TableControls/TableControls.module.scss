@@ -1,0 +1,10 @@
+.TableControls {
+  margin-left: auto;
+  position: relative;
+
+  &__wrapper {
+    position: relative;
+    display: flex;
+    width: 100%;
+  }
+}

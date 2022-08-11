@@ -1,7 +1,7 @@
-import '../styles/globals.scss'
+import '../client/styles/globals.scss'
 import type { AppProps } from 'next/app'
 import { ThemeProvider } from 'react-bootstrap'
-import { BREAKPOINTS, BREAKPOINTS_KEYS } from '../constants/ui'
+import { BREAKPOINTS, BREAKPOINTS_KEYS } from '../client/constants/ui'
 
 function MyApp({ Component, pageProps }: AppProps) {
     return (

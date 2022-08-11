@@ -30,3 +30,9 @@ export interface LiquidityBotConfig {
     adjustMaxGasPriceGwei: number,
     marketMap: Record<keyof AvailablePairs, PairConfig>
 }
+
+export interface LiquidityBotData {
+    id: string,
+    status: "Active" | "Disabled",
+    config: LiquidityBotConfig
+}
