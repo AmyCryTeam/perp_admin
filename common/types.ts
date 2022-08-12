@@ -5,6 +5,7 @@ export interface Market {
     baseToken: string
     poolAddr: string
     tickSpacing: number
+    imbalanceStartTime: number | null
     // config
     // maker
     liquidityAmount: Big
@@ -18,10 +19,11 @@ const enum AvailablePairs {
 }
 
 interface PairConfig {
-    "isEnabled": boolean,
-    "liquidityAmount": number,
-    "liquidityRangeOffset": number,
-    "liquidityAdjustThreshold": number
+    isEnabled: boolean,
+    liquidityAmount: number,
+    liquidityRangeOffset: number,
+    hedgeActivationDiff: number,
+    liquidityAdjustThreshold: number,
 }
 
 export interface LiquidityBotConfig {

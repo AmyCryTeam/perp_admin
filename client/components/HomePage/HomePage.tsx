@@ -27,6 +27,8 @@ export const HomePageContent = () => {
                     liquidityRangeOffset: e.target?.liquidity_range.value,
                     //@ts-ignore
                     liquidityAdjustThreshold: e.target?.liquidity_threshold.value,
+                    //@ts-ignore
+                    hedgeActivationDiff: e.target?.hedge_activation_diff.value,
                 }
             }
         }
@@ -101,7 +103,7 @@ export const HomePageContent = () => {
                             <Form.Label>Liquidity range offset</Form.Label>
                             <Form.Control
                                 required
-                                step="0.01"
+                                step="0.001"
                                 min={0}
                                 type="number"
                                 placeholder="0.4"
@@ -115,7 +117,7 @@ export const HomePageContent = () => {
                             <Form.Label>Liquidity adjust threshold</Form.Label>
                             <Form.Control
                                 required
-                                step="0.01"
+                                step="0.001"
                                 min={0}
                                 type="number"
                                 name="liquidity_threshold"
@@ -124,6 +126,17 @@ export const HomePageContent = () => {
                             <small id="liquidity_range_help" className="form-text text-muted">
                                 [market price / (1 + treshold), market price * (1 + treshold)]
                             </small>
+                        </Form.Group>
+                        <Form.Group className="mb-3" controlId="hedge_price_range">
+                            <Form.Label>Hedge activation diff</Form.Label>
+                            <Form.Control
+                                required
+                                step="0.001"
+                                min={0}
+                                type="number"
+                                name="hedge_activation_diff"
+                                placeholder="Threshold"
+                            />
                         </Form.Group>
                         <Button disabled={loading} variant="primary" type="submit">
                             {

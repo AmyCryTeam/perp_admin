@@ -2,12 +2,14 @@ import { min } from "@perp/common/build/lib/bn"
 import { priceToTick, sleep, tickToPrice } from "@perp/common/build/lib/helper"
 import { Log } from "@perp/common/build/lib/loggers"
 import { BotService } from "@perp/common/build/lib/perp/BotService"
-import { OpenOrder } from "@perp/common/build/lib/perp/PerpService"
+import { AmountType, OpenOrder, Side } from '@perp/common/build/lib/perp/PerpService'
 import Big from "big.js"
 import { ethers } from "ethers"
 import { Service } from "typedi"
 
 import { LiquidityBotConfig, Market } from '../common/types'
+
+const DUST_USD_SIZE = Big(100)
 
 @Service()
 export class Maker extends BotService {
@@ -17,7 +19,7 @@ export class Maker extends BotService {
 
     private wallet!: ethers.Wallet
     private marketMap: { [key: string]: Market } = {}
-    private marketOrderMap: { [key: string]: OpenOrder } = {}
+    private marketOrderMap: { [key: string]: OpenOrder&{entryPrice?: Big} } = {}
     private referralCode: string | null = null
 
     setConfig = (config: LiquidityBotConfig) => {
@@ -69,6 +71,8 @@ export class Maker extends BotService {
             poolMap[pool.baseSymbol] = pool
         }
 
+        console.log(poolMap)
+
         for (const [marketName, market] of Object.entries(this.config!.marketMap)) {
             if (!market.isEnabled) {
                 continue
@@ -84,6 +88,7 @@ export class Maker extends BotService {
                 liquidityAmount: Big(market.liquidityAmount),
                 liquidityRangeMultiplier: Big(market.liquidityRangeOffset).add(1),
                 liquidityAdjustMultiplier: Big(market.liquidityAdjustThreshold).add(1),
+                imbalanceStartTime: null
             }
         }
     }
@@ -124,6 +129,7 @@ export class Maker extends BotService {
 
                     await this.refreshOrders(market)
                     await this.adjustLiquidity(market)
+                    await this.hedge(market)
                 } catch (err: any) {
                     await this.log.jerror({
                         event: "AdjustLiquidityError",
@@ -131,8 +137,85 @@ export class Maker extends BotService {
                     })
                 }
             }
+
             await sleep(this.config!.priceCheckInterval * 1000)
         }
+    }
+
+    async hedge(market: Market) {
+        if (!this.config?.adjustMaxGasPriceGwei) {
+            return;
+        }
+
+        const now = Date.now();
+
+        if (market.imbalanceStartTime === null) {
+            market.imbalanceStartTime = now
+        }
+
+        const marketPrice = await this.perpService.getMarketPrice(market.poolAddr)
+        const order = this.marketOrderMap[market.name]
+
+        if (!order.entryPrice) {
+            console.log('\n\n', 'no entry price', '\n\n')
+            return;
+        }
+
+        const diff = marketPrice.minus(order.entryPrice).abs().div(marketPrice.add(order.entryPrice).div(2)).abs();
+
+
+        // @ts-ignore
+        if (diff.gte(this.config.marketMap[market.name].hedgeActivationDiff)) {
+            const positionValue = await this.perpService.getTotalPositionValue(this.wallet.address, market.baseToken);
+            if (+positionValue !== 0) {
+                return;
+            }
+
+            const side = marketPrice.gt(order.entryPrice) ? Side.SHORT : Side.LONG
+
+            if (+order.baseDebt === 0) {
+                console.log('\n\n', 'no base debt', '\n\n')
+                return;
+            }
+
+            this.log.jinfo({
+                event: "Open futures position",
+                params: {
+                    market: market.name,
+                    marketPrice,
+                    liquidityAmount: market.liquidityAmount,
+                    value: Big(market.liquidityAmount).div(marketPrice),
+                    side: side,
+                },
+            })
+
+            await this.openPosition(
+                this.wallet,
+                market.baseToken,
+                side,
+                AmountType.QUOTE,
+                market.liquidityAmount,
+                undefined,
+                Big(this.config?.adjustMaxGasPriceGwei),
+            )
+        } else {
+            const positionValue = await this.perpService.getTotalPositionValue(this.wallet.address, market.baseToken);
+            if (+positionValue !== 0) {
+                return;
+            }
+            await this.reducePosition(market)
+        }
+    }
+
+    async reducePosition(market: Market) {
+        const positionValue = await this.perpService.getTotalPositionValue(this.wallet.address, market.baseToken)
+
+        this.log.jinfo({
+            event: "Reduce position",
+            params: { market: market.name, positionValue: +positionValue },
+        })
+
+        await this.closePosition(this.wallet, market.baseToken)
     }
 
     async refreshOrders(market: Market) {
@@ -150,15 +233,16 @@ export class Maker extends BotService {
                 },
             })
         }
+
         switch (openOrders.length) {
             case 0: {
-                // create a new order
+                console.log("\ncreate a new order\n")
                 this.marketOrderMap[market.name] = await this.createOrder(market)
                 break
             }
             case 1: {
-                // set the order
-                this.marketOrderMap[market.name] = openOrders[0]
+                const marketPrice = this.marketOrderMap[market.name].entryPrice;
+                this.marketOrderMap[market.name] = { ...openOrders[0], entryPrice: marketPrice }
                 break
             }
             default: {
@@ -185,7 +269,7 @@ export class Maker extends BotService {
         return marketPrice.gt(lowerAdjustPrice) && marketPrice.lt(upperAdjustPrice)
     }
 
-    async createOrder(market: Market): Promise<OpenOrder> {
+    async createOrder(market: Market): Promise<OpenOrder&{entryPrice:Big}> {
         const buyingPower = await this.perpService.getBuyingPower(this.wallet.address)
         const liquidityAmount = min([market.liquidityAmount, buyingPower])
         if (liquidityAmount.lte(0)) {
@@ -217,19 +301,23 @@ export class Maker extends BotService {
         })
         const quote = liquidityAmount.div(2)
         const base = liquidityAmount.div(2).div(marketPrice)
+
         await this.addLiquidity(this.wallet, market.baseToken, lowerTick, upperTick, base, quote, false)
+
         const newOpenOrder = await this.perpService.getOpenOrder(
             this.wallet.address,
             market.baseToken,
             lowerTick,
             upperTick,
         )
+
         return {
             upperTick: upperTick,
             lowerTick: lowerTick,
             liquidity: newOpenOrder.liquidity,
             baseDebt: newOpenOrder.baseDebt,
             quoteDebt: newOpenOrder.quoteDebt,
+            entryPrice: marketPrice,
         }
     }
 
@@ -249,7 +337,7 @@ export class Maker extends BotService {
             openOrder.upperTick,
             openOrder.liquidity,
         )
-        await this.closePosition(this.wallet, market.baseToken, undefined, undefined, undefined, this.referralCode)
+        await this.closePosition(this.wallet, market.baseToken)
     }
 
     async adjustLiquidity(market: Market): Promise<void> {
@@ -262,6 +350,7 @@ export class Maker extends BotService {
                 lowerPrice: +tickToPrice(order.lowerTick),
             },
         })
+
         if (!(await this.isValidOrder(market, order))) {
             await this.removeOrder(market, order)
             const newOpenOrder = await this.createOrder(market)

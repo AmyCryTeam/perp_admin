@@ -1,20 +1,14 @@
 import "reflect-metadata"
-import dotenv from "dotenv"
+import "dotenv-flow/config"
 import { Log, initLog } from "@perp/common/build/lib/loggers"
 import { Container } from "typedi"
 import { uid } from 'uid';
 import { LiquidityBotConfig } from '../common/types'
 
 import { Maker } from "./Maker"
-
-dotenv.config();
 initLog()
 
 export async function startLiquidityBot(config: LiquidityBotConfig): Promise<void> {
-    // process.env["STAGE"] = "production"
-    // process.env["NETWORK"] = "optimism"
-
-    // crash fast on uncaught errors
     const exitUncaughtError = async (err: any): Promise<void> => {
         const log = Log.getLogger("startLiquidityBot")
 
