@@ -8,7 +8,7 @@ import { LiquidityBotConfig } from '../common/types'
 import { Maker } from "./Maker"
 initLog()
 
-export async function startLiquidityBot(config: LiquidityBotConfig): Promise<void> {
+export async function startLiquidityBot(config: LiquidityBotConfig, id: string = uid(10)): Promise<void> {
     const exitUncaughtError = async (err: any): Promise<void> => {
         const log = Log.getLogger("startLiquidityBot")
 
@@ -32,8 +32,10 @@ export async function startLiquidityBot(config: LiquidityBotConfig): Promise<voi
     const maker = Container.get(Maker)
     maker.setConfig(config)
     await maker.setup()
-    activeMakers.set(uid(10), maker)
+    activeMakers.set(id, maker)
     await maker.start()
+
+    return
 }
 
 

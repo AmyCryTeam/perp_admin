@@ -16,8 +16,8 @@ export const Header = () => {
                         <Nav className="me-auto">
                             <Nav.Link href="bots">Active bots</Nav.Link>
                         </Nav>
+                        <Button variant="outline-success" href="/">Add Bot</Button>
                     </Navbar.Collapse>
-                    <Button variant="outline-success" href="/">Provide liquidity</Button>
                 </Container>
             </Navbar>
             <div className={styles.HeaderBackdrop} />

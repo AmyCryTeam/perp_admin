@@ -1,10 +1,11 @@
-import styles from './HomePage.module.scss'
+import { useRouter } from 'next/router'
 import { FormEventHandler, useState } from 'react'
 import { Button, Col, Container, Form, Row } from 'react-bootstrap'
 import { LiquidityBotConfig } from '../../../common/types'
 
 export const HomePageContent = () => {
-    const [loading, setIsLoading] = useState(false)
+    const [loading, setIsLoading] = useState(false);
+    const router = useRouter();
 
     const handleSubmit: FormEventHandler<HTMLFormElement> = (e) => {
         e.preventDefault();
@@ -38,9 +39,12 @@ export const HomePageContent = () => {
         fetch('/api/bot', {
             method: 'POST',
             body: JSON.stringify(config)
-        }).then(() => {
-            setIsLoading(false)
         })
+            .then((res) => res.json())
+            .then(() => {
+                setIsLoading(false)
+                router.push('/bots')
+            })
     }
 
     return (
@@ -48,8 +52,7 @@ export const HomePageContent = () => {
             <Row>
                 <Col
                     xs={12}
-                    md={{ span: 8, offset: 2 }}
-                    xl={{ span: 4, offset: 4 }}
+                    md={{ span: 10, offset: 1 }}
                 >
                     <Form onSubmit={handleSubmit}>
                         <Form.Group className="mb-3" controlId="private_key">
@@ -62,6 +65,35 @@ export const HomePageContent = () => {
                                 placeholder="#00000000000000000000000000000000"
                             />
                         </Form.Group>
+                        <Row className="mb-3">
+                            <Form.Group as={Col} controlId="pair_name">
+                                <Form.Label>Pair</Form.Label>
+                                <Form.Select required name="pair_name">
+                                    <option>vBTC</option>
+                                    <option>vPERP</option>
+                                </Form.Select>
+                            </Form.Group>
+                            <Form.Group as={Col} controlId="liquidity_amount">
+                                <Form.Label>Liquidity amount</Form.Label>
+                                <Form.Control
+                                    required
+                                    min={0}
+                                    type="number"
+                                    placeholder="2000 usdc"
+                                    name="liquidity_amount"
+                                />
+                            </Form.Group>
+                            <Form.Group as={Col} controlId="max_gas_price">
+                                <Form.Label>Max gas price</Form.Label>
+                                <Form.Control
+                                    required
+                                    min={0}
+                                    type="number"
+                                    placeholder="200 gwey"
+                                    name="gas_price"
+                                />
+                            </Form.Group>
+                        </Row>
                         <Form.Group className="mb-3" controlId="price_check_interval">
                             <Form.Label>Price check interval</Form.Label>
                             <Form.Control
@@ -70,33 +102,6 @@ export const HomePageContent = () => {
                                 type="number"
                                 name="price_check_interval"
                                 placeholder="100 sec"
-                            />
-                        </Form.Group>
-                        <Form.Group className="mb-3" controlId="pair_name">
-                            <Form.Label>Pair</Form.Label>
-                            <Form.Select required name="pair_name">
-                                <option>vBTC</option>
-                                <option>vPERP</option>
-                            </Form.Select>
-                        </Form.Group>
-                        <Form.Group className="mb-3" controlId="max_gas_price">
-                            <Form.Label>Max gas price</Form.Label>
-                            <Form.Control
-                                required
-                                min={0}
-                                type="number"
-                                placeholder="200 gwey"
-                                name="gas_price"
-                            />
-                        </Form.Group>
-                        <Form.Group className="mb-3" controlId="liquidity_amount">
-                            <Form.Label>Liquidity amount</Form.Label>
-                            <Form.Control
-                                required
-                                min={0}
-                                type="number"
-                                placeholder="2000 usdc"
-                                name="liquidity_amount"
                             />
                         </Form.Group>
                         <Form.Group className="mb-3" controlId="liquidity_range">
@@ -128,7 +133,7 @@ export const HomePageContent = () => {
                             </small>
                         </Form.Group>
                         <Form.Group className="mb-3" controlId="hedge_price_range">
-                            <Form.Label>Hedge activation diff</Form.Label>
+                            <Form.Label>Hedge activation offset</Form.Label>
                             <Form.Control
                                 required
                                 step="0.001"

@@ -43,8 +43,7 @@ export const TableControls: React.FC<ITableControlProps> = (props) => {
                     <Printer color="white" size={10}/>
                 </Button>
                 <Button
-                    // disabled={isLoading}
-                    disabled={true}
+                    disabled={isLoading}
                     size="sm"
                     variant="secondary"
                     onClick={() => {

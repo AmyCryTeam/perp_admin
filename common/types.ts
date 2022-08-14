@@ -38,3 +38,22 @@ export interface LiquidityBotData {
     status: "Active" | "Disabled",
     config: LiquidityBotConfig
 }
+
+export interface LogData {
+    event: string;
+    params?: {
+        [key: string]: any;
+    };
+}
+
+export interface ErrorLogData extends LogData {
+    params: {
+        err: any;
+        [key: string]: any;
+    };
+}
+
+export type HistoryLog = {
+    date: Date,
+    data: LogData | ErrorLogData
+}

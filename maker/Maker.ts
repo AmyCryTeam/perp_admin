@@ -7,20 +7,18 @@ import Big from "big.js"
 import { ethers } from "ethers"
 import { Service } from "typedi"
 
-import { LiquidityBotConfig, Market } from '../common/types'
-
-const DUST_USD_SIZE = Big(100)
+import { ErrorLogData, HistoryLog, LiquidityBotConfig, LogData, Market } from '../common/types'
 
 @Service()
 export class Maker extends BotService {
     public active = false
     public config?: LiquidityBotConfig
+    public logsHistory: Array<HistoryLog> = []
     readonly log = Log.getLogger(Maker.name)
 
     private wallet!: ethers.Wallet
     private marketMap: { [key: string]: Market } = {}
     private marketOrderMap: { [key: string]: OpenOrder&{entryPrice?: Big} } = {}
-    private referralCode: string | null = null
 
     setConfig = (config: LiquidityBotConfig) => {
         this.config = config
@@ -32,35 +30,25 @@ export class Maker extends BotService {
             return;
         }
 
-        this.log.jinfo({
+        this.logInfo({
             event: "SetupMaker",
         })
+
         const privateKey = this.config.privateKey
 
         if (!privateKey) {
             throw Error("no env PRIVATE_KEY is provided")
         }
+
         this.wallet = this.ethService.privateKeyToWallet(privateKey)
         await this.createNonceMutex([this.wallet])
         await this.createMarketMap()
 
-        try {
-            this.referralCode = await this.perpService.getReferralCode(this.wallet.address)
-        } catch (err: any) {
-            if (err.message && err.message.includes("You do not have a referral code")) {
-                this.log.jinfo({ event: "NoReferralCode" })
-            } else {
-                await this.log.jerror({ event: "GetReferralCodeError", params: { err } })
-            }
-            this.referralCode = "perpmaker"
-        }
-
-        this.log.jinfo({
+        this.logInfo({
             event: "Maker",
             params: {
                 address: this.wallet.address,
                 nextNonce: this.addrNonceMutexMap[this.wallet.address].nextNonce,
-                referralCode: this.referralCode,
             },
         })
     }
@@ -70,8 +58,6 @@ export class Maker extends BotService {
         for (const pool of this.perpService.metadata.pools) {
             poolMap[pool.baseSymbol] = pool
         }
-
-        console.log(poolMap)
 
         for (const [marketName, market] of Object.entries(this.config!.marketMap)) {
             if (!market.isEnabled) {
@@ -83,8 +69,6 @@ export class Maker extends BotService {
                 baseToken: pool.baseAddress,
                 poolAddr: pool.address,
                 tickSpacing: await this.perpService.getTickSpacing(pool.address),
-                // config
-                // maker
                 liquidityAmount: Big(market.liquidityAmount),
                 liquidityRangeMultiplier: Big(market.liquidityRangeOffset).add(1),
                 liquidityAdjustMultiplier: Big(market.liquidityAdjustThreshold).add(1),
@@ -95,36 +79,55 @@ export class Maker extends BotService {
 
     async start(): Promise<void> {
         if (!this.config) {
-            this.log.jinfo({ event: "Error", params: { message: "Please provide config" } })
+            this.logInfo({ event: "Error", params: { message: "Please provide config" } })
             return;
         }
 
         const balance = await this.perpService.getUSDCBalance(this.wallet.address)
-        this.log.jinfo({ event: "CheckUSDCBalance", params: { balance: +balance } })
+
+        this.logInfo({ event: "CheckUSDCBalance", params: { balance: +balance } })
+
         if (balance.gt(0)) {
             await this.approve(this.wallet, balance)
             await this.deposit(this.wallet, balance)
         }
+
+        this.active = true
         await this.makerRoutine()
     }
 
+    async stop(): Promise<void> {
+        this.logInfo({ event: "Stop Maker Routine started", params: {} })
+
+        this.active = false
+
+        for (const market of Object.values(this.marketMap)) {
+            this.logInfo({ event: "Stop token maker ", params: { token: market.baseToken } })
+
+            await this.reducePosition(market)
+            const order = this.marketOrderMap[market.name]
+            await this.removeOrder(market, order)
+
+            this.logInfo({ event: "Stop token completed ", params: { token: market.baseToken } })
+        }
+
+        this.logInfo({ event: "Stop Maker Routine completed", params: {} })
+    }
+
     async makerRoutine() {
-        while (true) {
+        while (this.active) {
             // TODO: use Promise.all()
             for (const market of Object.values(this.marketMap)) {
                 try {
                     const gasPrice = await this.ethService.getGasPrice()
                     const adjustMaxGasPrice = Big(this.config!.adjustMaxGasPriceGwei)
                     if (gasPrice.gt(adjustMaxGasPrice)) {
-                        this.log.jwarn({
+                        this.logWarn({
                             event: "GasPriceExceed",
                             params: { gasPrice: +gasPrice, maxGasPrice: +adjustMaxGasPrice },
                         })
-                        continue
-                    }
 
-                    if (!this.active) {
-                        this.active = true
+                        continue
                     }
 
                     await this.refreshOrders(market)
@@ -157,12 +160,14 @@ export class Maker extends BotService {
         const order = this.marketOrderMap[market.name]
 
         if (!order.entryPrice) {
-            console.log('\n\n', 'no entry price', '\n\n')
+            await this.logError({
+                event: "NoEntryPriceError",
+                params: { err: null },
+            })
             return;
         }
 
         const diff = marketPrice.minus(order.entryPrice).abs().div(marketPrice.add(order.entryPrice).div(2)).abs();
-
 
         // @ts-ignore
         if (diff.gte(this.config.marketMap[market.name].hedgeActivationDiff)) {
@@ -171,14 +176,17 @@ export class Maker extends BotService {
                 return;
             }
 
-            const side = marketPrice.gt(order.entryPrice) ? Side.SHORT : Side.LONG
+            const side = marketPrice.gt(order.entryPrice) ? Side.LONG : Side.SHORT
 
             if (+order.baseDebt === 0) {
-                console.log('\n\n', 'no base debt', '\n\n')
+                await this.logError({
+                    event: "NoBaseDebtError",
+                    params: { err: null },
+                })
                 return;
             }
 
-            this.log.jinfo({
+            this.logInfo({
                 event: "Open futures position",
                 params: {
                     market: market.name,
@@ -210,9 +218,12 @@ export class Maker extends BotService {
     async reducePosition(market: Market) {
         const positionValue = await this.perpService.getTotalPositionValue(this.wallet.address, market.baseToken)
 
-        this.log.jinfo({
-            event: "Reduce position",
-            params: { market: market.name, positionValue: +positionValue },
+        this.logInfo({
+            event: "Reduce futures position",
+            params: {
+                market: market.name,
+                positionValue: +positionValue
+            },
         })
 
         await this.closePosition(this.wallet, market.baseToken)
@@ -223,8 +234,9 @@ export class Maker extends BotService {
         if (openOrders.length > 1) {
             throw Error("account has more than 1 orders")
         }
+
         for (const openOrder of openOrders) {
-            this.log.jinfo({
+            this.logInfo({
                 event: "GetOpenOrders",
                 params: {
                     market: market.name,
@@ -236,18 +248,29 @@ export class Maker extends BotService {
 
         switch (openOrders.length) {
             case 0: {
-                console.log("\ncreate a new order\n")
+                this.logInfo({
+                    event: "Create new Order",
+                    params: {
+                        market: market.name,
+                    },
+                })
                 this.marketOrderMap[market.name] = await this.createOrder(market)
                 break
             }
             case 1: {
+                this.logInfo({
+                    event: "Update order",
+                    params: {
+                        market: market.name,
+                    },
+                })
                 const marketPrice = this.marketOrderMap[market.name].entryPrice;
                 this.marketOrderMap[market.name] = { ...openOrders[0], entryPrice: marketPrice }
                 break
             }
             default: {
                 // abnormal case, remove all orders manually
-                await this.log.jerror({
+                await this.logError({
                     event: "RefreshOrderError",
                     params: { err: new Error("RefreshOrderError"), openOrders },
                 })
@@ -261,11 +284,10 @@ export class Maker extends BotService {
         const marketPrice = await this.perpService.getMarketPrice(market.poolAddr)
         const upperPrice = tickToPrice(openOrder.upperTick)
         const lowerPrice = tickToPrice(openOrder.lowerTick)
-        // since upper price = central price * range multiplier, lower price = central price / range multiplier
-        // central price = sqrt(upper price * lower price)
         const centralPrice = upperPrice.mul(lowerPrice).sqrt()
         const upperAdjustPrice = centralPrice.mul(market.liquidityAdjustMultiplier)
         const lowerAdjustPrice = centralPrice.div(market.liquidityAdjustMultiplier)
+
         return marketPrice.gt(lowerAdjustPrice) && marketPrice.lt(upperAdjustPrice)
     }
 
@@ -273,13 +295,14 @@ export class Maker extends BotService {
         const buyingPower = await this.perpService.getBuyingPower(this.wallet.address)
         const liquidityAmount = min([market.liquidityAmount, buyingPower])
         if (liquidityAmount.lte(0)) {
-            this.log.jwarn({
+            this.logWarn({
                 event: "NoBuyingPowerToCreateOrder",
                 params: {
                     market: market.name,
                     buyingPower: +buyingPower,
                 },
             })
+
             throw Error("NoBuyingPowerToCreateOrder")
         }
 
@@ -288,7 +311,8 @@ export class Maker extends BotService {
         const lowerPrice = marketPrice.div(market.liquidityRangeMultiplier)
         const upperTick = priceToTick(upperPrice, market.tickSpacing)
         const lowerTick = priceToTick(lowerPrice, market.tickSpacing)
-        this.log.jinfo({
+
+        this.logInfo({
             event: "CreateOrder",
             params: {
                 market: market.name,
@@ -322,7 +346,7 @@ export class Maker extends BotService {
     }
 
     async removeOrder(market: Market, openOrder: OpenOrder): Promise<void> {
-        this.log.jinfo({
+        this.logInfo({
             event: "RemoveOrder",
             params: {
                 market: market.name,
@@ -337,12 +361,13 @@ export class Maker extends BotService {
             openOrder.upperTick,
             openOrder.liquidity,
         )
+
         await this.closePosition(this.wallet, market.baseToken)
     }
 
     async adjustLiquidity(market: Market): Promise<void> {
         const order = this.marketOrderMap[market.name]
-        this.log.jinfo({
+        this.logInfo({
             event: "AdjustOrder",
             params: {
                 market: market.name,
@@ -354,7 +379,35 @@ export class Maker extends BotService {
         if (!(await this.isValidOrder(market, order))) {
             await this.removeOrder(market, order)
             const newOpenOrder = await this.createOrder(market)
+
             this.marketOrderMap[market.name] = newOpenOrder
         }
+    }
+
+    logError = (logErrorData: ErrorLogData) => {
+        this.logsHistory.push({
+            date: new Date(),
+            data: logErrorData,
+        })
+
+        return this.log.jerror(logErrorData)
+    }
+
+    logInfo = (logData: LogData) => {
+        this.logsHistory.push({
+            date: new Date(),
+            data: logData,
+        })
+
+        return this.log.jinfo(logData)
+    }
+
+    logWarn = (logData: LogData) => {
+        this.logsHistory.push({
+            date: new Date(),
+            data: logData,
+        })
+
+        return this.log.jwarn(logData)
     }
 }

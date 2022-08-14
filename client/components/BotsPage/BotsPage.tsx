@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react'
-import { Badge, Col, Container, Row, Table } from 'react-bootstrap'
+import { useEffect, useRef, useState } from 'react'
+import { Badge, Button, Col, Container, Row, Table } from 'react-bootstrap'
 import { LiquidityBotData } from '../../../common/types'
 import { TableControls } from './components/TableControls/TableControls'
+
+const REFETCH_TIMEOUT = 2000;
 
 export const BotsPageContent = () => {
     const [bots, setBots] = useState<LiquidityBotData[]>([]);
@@ -11,6 +13,10 @@ export const BotsPageContent = () => {
             .then(res => res.json())
             .then(({ data }) => {
                 setBots(data)
+
+                setTimeout(() => {
+                    checkBots()
+                }, REFETCH_TIMEOUT)
             })
     }
 
@@ -21,42 +27,52 @@ export const BotsPageContent = () => {
     return (
         <Container>
             <Row>
-                <Col md={12} xl={{span: 8, offset: 2}}>
-                    <div className="table-responsive" >
-                        <Table hover variant="dark">
-                            <thead>
+                {bots.length > 0
+                    ? (
+                        <Col md={12} xl={{span: 10, offset: 1}}>
+                            <Table hover variant="dark" responsive>
+                                <thead>
                                 <tr>
                                     <th scope="col">Pairs</th>
                                     <th scope="col">Total liquidity</th>
                                     <th scope="col"> </th>
                                 </tr>
-                            </thead>
-                            <tbody>
-                            {
-                                bots.map((bot) => {
-                                    return (
-                                        <tr key={bot.id}>
-                                            <th scope="row">
-                                                {Object.keys(bot.config.marketMap).join(", ")}
-                                                &nbsp;&nbsp;&nbsp;
-                                                {
-                                                    bot.status
-                                                        ? <Badge bg="success">Active</Badge>
-                                                        : <Badge bg="secondary">Disabled</Badge>
-                                                }
-                                            </th>
-                                            <td>{getLiquidityFromBot(bot)}</td>
-                                            <td>
-                                                <TableControls botData={bot} />
-                                            </td>
-                                        </tr>
-                                    )
-                                })
-                            }
-                            </tbody>
-                        </Table>
-                    </div>
-                </Col>
+                                </thead>
+                                <tbody>
+                                {
+                                    bots.map((bot) => {
+                                        return (
+                                            <tr key={bot.id}>
+                                                <th scope="row">
+                                                    {Object.keys(bot.config.marketMap).join(", ")}
+                                                    &nbsp;&nbsp;&nbsp;
+                                                    {
+                                                        bot.status
+                                                            ? <Badge bg="success">Active</Badge>
+                                                            : <Badge bg="secondary">Disabled</Badge>
+                                                    }
+                                                </th>
+                                                <td>{getLiquidityFromBot(bot)}</td>
+                                                <td>
+                                                    <TableControls botData={bot} />
+                                                </td>
+                                            </tr>
+                                        )
+                                    })
+                                }
+                                </tbody>
+                            </Table>
+                        </Col>
+                    )
+                    : (
+                        <div>
+                            <h3>
+                                List is Empty
+                            </h3>
+                            <Button variant="outline-success" href="/">Add Bot</Button>
+                        </div>
+                    )
+                }
             </Row>
         </Container>
     )
