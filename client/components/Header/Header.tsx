@@ -14,7 +14,7 @@ export const Header = () => {
                     <Navbar.Toggle aria-controls="responsive-navbar-nav" />
                     <Navbar.Collapse id="responsive-navbar-nav">
                         <Nav className="me-auto">
-                            <Nav.Link href="bots">Active bots</Nav.Link>
+                            <Nav.Link href="/bots">Active bots</Nav.Link>
                         </Nav>
                         <Button variant="outline-success" href="/">Add Bot</Button>
                     </Navbar.Collapse>

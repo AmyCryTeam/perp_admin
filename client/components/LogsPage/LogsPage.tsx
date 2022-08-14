@@ -14,8 +14,9 @@ export const LogsPageContent = () => {
         fetch(`/api/bot/${botId}/logs`)
             .then((res) => res.json())
             .then((payload) => {
+                console.log(payload)
                 if (payload.success) {
-                    setLogs(payload.logs || [])
+                    setLogs(payload.data || [])
                 }
 
                 setTimeout(() => {
@@ -89,7 +90,7 @@ export const LogsPageContent = () => {
                     : (
                         <div>
                             <h3>
-                                Bot did not exists
+                                Bot is not exists
                             </h3>
                             <Button variant="outline-success" href="/">Add Bot</Button>
                         </div>
