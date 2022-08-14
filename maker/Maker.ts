@@ -167,7 +167,8 @@ export class Maker extends BotService {
             return;
         }
 
-        const diff = marketPrice.minus(order.entryPrice).abs().div(marketPrice.add(order.entryPrice).div(2)).abs();
+        // (marketprice - entryPrice)/((marketPrice+entryPrice)/2)
+        const diff = marketPrice.minus(order.entryPrice).div(order.entryPrice).abs();
 
         // @ts-ignore
         if (diff.gte(this.config.marketMap[market.name].hedgeActivationDiff)) {
@@ -385,7 +386,7 @@ export class Maker extends BotService {
     }
 
     logError = (logErrorData: ErrorLogData) => {
-        this.logsHistory.push({
+        this.logsHistory.unshift({
             date: new Date(),
             data: logErrorData,
         })
@@ -394,7 +395,7 @@ export class Maker extends BotService {
     }
 
     logInfo = (logData: LogData) => {
-        this.logsHistory.push({
+        this.logsHistory.unshift({
             date: new Date(),
             data: logData,
         })
@@ -403,7 +404,7 @@ export class Maker extends BotService {
     }
 
     logWarn = (logData: LogData) => {
-        this.logsHistory.push({
+        this.logsHistory.unshift({
             date: new Date(),
             data: logData,
         })
