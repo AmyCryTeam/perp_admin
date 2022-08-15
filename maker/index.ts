@@ -9,6 +9,8 @@ import { Maker } from "./Maker"
 initLog()
 
 export async function startLiquidityBot(config: LiquidityBotConfig, id: string = uid(10)): Promise<void> {
+    process.env["STAGE"] = "production"
+    process.env["NETWORK"] = "optimism"
     const exitUncaughtError = async (err: any): Promise<void> => {
         const log = Log.getLogger("startLiquidityBot")
 
