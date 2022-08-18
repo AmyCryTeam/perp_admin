@@ -53,8 +53,14 @@ export const HomePageContent = () => {
                 <Col
                     xs={12}
                     md={{ span: 10, offset: 1 }}
+                    xl={{ span: 6, offset: 3 }}
                 >
                     <Form onSubmit={handleSubmit}>
+                        <Form.Text>
+                            <h4>
+                                Account
+                            </h4>
+                        </Form.Text>
                         <Form.Group className="mb-3" controlId="private_key">
                             <Form.Label>Private key</Form.Label>
                             <Form.Control
@@ -65,16 +71,34 @@ export const HomePageContent = () => {
                                 placeholder="#00000000000000000000000000000000"
                             />
                         </Form.Group>
+                        <Form.Text>
+                            <h4>
+                                Liquidity
+                            </h4>
+                        </Form.Text>
                         <Row className="mb-3">
                             <Form.Group as={Col} controlId="pair_name">
                                 <Form.Label>Pair</Form.Label>
                                 <Form.Select required name="pair_name">
                                     <option>vBTC</option>
                                     <option>vPERP</option>
+                                    <option>vAAVE</option>
+                                    <option>vAVAX</option>
+                                    <option>vBNB</option>
+                                    <option>vCRV</option>
+                                    <option>vETH</option>
+                                    <option>vFLOW</option>
+                                    <option>vFTM</option>
+                                    <option>vLINK</option>
+                                    <option>vMATIC</option>
+                                    <option>vNEAR</option>
+                                    <option>vONE</option>
+                                    <option>vSAND</option>
+                                    <option>vSOL</option>
                                 </Form.Select>
                             </Form.Group>
                             <Form.Group as={Col} controlId="liquidity_amount">
-                                <Form.Label>Liquidity amount</Form.Label>
+                                <Form.Label>Amount</Form.Label>
                                 <Form.Control
                                     required
                                     min={0}
@@ -93,6 +117,17 @@ export const HomePageContent = () => {
                                     name="gas_price"
                                 />
                             </Form.Group>
+                            <Form.Group as={Col} controlId="liquidity_range">
+                                <Form.Label>Range</Form.Label>
+                                <Form.Control
+                                    required
+                                    step="0.001"
+                                    min={0}
+                                    type="number"
+                                    placeholder="0.4"
+                                    name="liquidity_range"
+                                />
+                            </Form.Group>
                         </Row>
                         <Form.Group className="mb-3" controlId="price_check_interval">
                             <Form.Label>Price check interval</Form.Label>
@@ -103,20 +138,6 @@ export const HomePageContent = () => {
                                 name="price_check_interval"
                                 placeholder="100 sec"
                             />
-                        </Form.Group>
-                        <Form.Group className="mb-3" controlId="liquidity_range">
-                            <Form.Label>Liquidity range offset</Form.Label>
-                            <Form.Control
-                                required
-                                step="0.001"
-                                min={0}
-                                type="number"
-                                placeholder="0.4"
-                                name="liquidity_range"
-                            />
-                            <small id="liquidity_range_help" className="form-text text-muted">
-                                [current_price / (1 + offset), current price * (1 + offset)]
-                            </small>
                         </Form.Group>
                         <Form.Group className="mb-3" controlId="liquidity_threshold">
                             <Form.Label>Liquidity adjust threshold</Form.Label>
@@ -132,6 +153,11 @@ export const HomePageContent = () => {
                                 [market price / (1 + treshold), market price * (1 + treshold)]
                             </small>
                         </Form.Group>
+                        <Form.Text>
+                            <h4>
+                                Futures
+                            </h4>
+                        </Form.Text>
                         <Form.Group className="mb-3" controlId="hedge_price_range">
                             <Form.Label>Hedge activation offset</Form.Label>
                             <Form.Control
