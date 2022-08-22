@@ -16,6 +16,8 @@ export default function handler(
   if (req.method === "POST") {
     const id = uid(10);
 
+    console.log(JSON.parse(req.body))
+
     startLiquidityBot(JSON.parse(req.body), id)
 
     res.status(200).json(

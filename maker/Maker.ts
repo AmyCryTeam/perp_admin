@@ -198,21 +198,50 @@ export class Maker extends BotService {
                 },
             })
 
+            // @ts-ignore
+            const estimatedPositionSize = market.liquidityAmount.times(this.config.marketMap[market.name].hedgeVolume)
+            const hedgePositionSize = market.liquidityAmount > estimatedPositionSize
+                ? estimatedPositionSize
+                : market.liquidityAmount
+
+            // @ts-ignore
+            const min = marketPrice.minus(marketPrice.times(this.config.marketMap[market.name].hedgeLiquidationBot));
+            // @ts-ignore
+            const max = marketPrice.plus(marketPrice.times(this.config.marketMap[market.name].hedgeLiquidationTop));
+
             await this.openPosition(
                 this.wallet,
                 market.baseToken,
                 side,
                 AmountType.QUOTE,
-                market.liquidityAmount,
+                hedgePositionSize,
                 undefined,
                 Big(this.config?.adjustMaxGasPriceGwei),
             )
+
+            // @ts-ignore
+            this.config.futuresMap[market.name] = {
+                min,
+                max
+            }
         } else {
             const positionValue = await this.perpService.getTotalPositionValue(this.wallet.address, market.baseToken);
+
             if (+positionValue !== 0) {
                 return;
             }
+
             await this.reducePosition(market)
+        }
+
+        // @ts-ignore
+        if (this.config.futuresMap[market.name]) {
+            // @ts-ignore
+            if (this.config.futuresMap[market.name].max > marketPrice || this.config.futuresMap[market.name].min < marketPrice) {
+                await this.reducePosition(market)
+                // @ts-ignore
+                delete this.config.futuresMap[market.name]
+            }
         }
     }
 

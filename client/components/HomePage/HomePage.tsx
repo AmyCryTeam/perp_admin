@@ -1,11 +1,36 @@
 import { useRouter } from 'next/router'
 import { FormEventHandler, useState } from 'react'
-import { Button, Col, Container, Form, Row } from 'react-bootstrap'
+import { Button, Col, Container, Form, ListGroup, Modal, Row, Stack } from 'react-bootstrap'
+import styles from './HomePage.module.scss'
 import { LiquidityBotConfig } from '../../../common/types'
+
+const MARKET_PAIRS = [
+    'vBTC',
+    'vPERP',
+    'vAAVE',
+    'vAVAX',
+    'vBNB',
+    'vCRV',
+    'vETH',
+    'vFLOW',
+    'vFTM',
+    'vLINK',
+    'vMATIC',
+    'vNEAR',
+    'vONE',
+    'vSAND',
+    'vSOL',
+]
 
 export const HomePageContent = () => {
     const [loading, setIsLoading] = useState(false);
     const router = useRouter();
+    // TODO(Dimitreee): move to modal context
+    const [show, setShow] = useState(false);
+
+    const handleClose = () => setShow(false);
+    const handleShow = () => setShow(true);
+
 
     const handleSubmit: FormEventHandler<HTMLFormElement> = (e) => {
         e.preventDefault();
@@ -30,6 +55,12 @@ export const HomePageContent = () => {
                     liquidityAdjustThreshold: e.target?.liquidity_threshold.value,
                     //@ts-ignore
                     hedgeActivationDiff: e.target?.hedge_activation_diff.value,
+                    //@ts-ignore
+                    hedgeVolume: e.target?.hedge_volume.value,
+                    //@ts-ignore
+                    hedgeLiquidationBot: e.target?.hedge_liquidation_bot.value,
+                    //@ts-ignore
+                    hedgeLiquidationTop: e.target?.hedge_liquidation_top.value,
                 }
             }
         }
@@ -80,21 +111,11 @@ export const HomePageContent = () => {
                             <Form.Group as={Col} controlId="pair_name">
                                 <Form.Label>Pair</Form.Label>
                                 <Form.Select required name="pair_name">
-                                    <option>vBTC</option>
-                                    <option>vPERP</option>
-                                    <option>vAAVE</option>
-                                    <option>vAVAX</option>
-                                    <option>vBNB</option>
-                                    <option>vCRV</option>
-                                    <option>vETH</option>
-                                    <option>vFLOW</option>
-                                    <option>vFTM</option>
-                                    <option>vLINK</option>
-                                    <option>vMATIC</option>
-                                    <option>vNEAR</option>
-                                    <option>vONE</option>
-                                    <option>vSAND</option>
-                                    <option>vSOL</option>
+                                    {MARKET_PAIRS.map((pair) => {
+                                        return (
+                                            <option key={pair}>{pair}</option>
+                                        )
+                                    })}
                                 </Form.Select>
                             </Form.Group>
                             <Form.Group as={Col} controlId="liquidity_amount">
@@ -129,61 +150,132 @@ export const HomePageContent = () => {
                                 />
                             </Form.Group>
                         </Row>
-                        <Form.Group className="mb-3" controlId="price_check_interval">
-                            <Form.Label>Price check interval</Form.Label>
-                            <Form.Control
-                                required
-                                min={0}
-                                type="number"
-                                name="price_check_interval"
-                                placeholder="100 sec"
-                            />
-                        </Form.Group>
-                        <Form.Group className="mb-3" controlId="liquidity_threshold">
-                            <Form.Label>Liquidity adjust threshold</Form.Label>
-                            <Form.Control
-                                required
-                                step="0.001"
-                                min={0}
-                                type="number"
-                                name="liquidity_threshold"
-                                placeholder="Threshold"
-                            />
-                            <small id="liquidity_range_help" className="form-text text-muted">
-                                [market price / (1 + treshold), market price * (1 + treshold)]
-                            </small>
-                        </Form.Group>
+                        <Row>
+                            <Form.Group as={Col} controlId="price_check_interval">
+                                <Form.Label>Price check interval</Form.Label>
+                                <Form.Control
+                                    required
+                                    min={0}
+                                    type="number"
+                                    name="price_check_interval"
+                                    placeholder="100 sec"
+                                />
+                            </Form.Group>
+                            <Form.Group as={Col} controlId="liquidity_threshold">
+                                <Form.Label>Liquidity adjust threshold</Form.Label>
+                                <Form.Control
+                                    required
+                                    step="0.001"
+                                    min={0}
+                                    type="number"
+                                    name="liquidity_threshold"
+                                    placeholder="Threshold"
+                                />
+                                <small id="liquidity_range_help" className="form-text text-muted">
+                                    [market price / (1 + treshold), market price * (1 + treshold)]
+                                </small>
+                            </Form.Group>
+                        </Row>
                         <Form.Text>
                             <h4>
                                 Futures
                             </h4>
                         </Form.Text>
-                        <Form.Group className="mb-3" controlId="hedge_price_range">
-                            <Form.Label>Hedge activation offset</Form.Label>
-                            <Form.Control
-                                required
-                                step="0.001"
-                                min={0}
-                                type="number"
-                                name="hedge_activation_diff"
-                                placeholder="Threshold"
-                            />
-                        </Form.Group>
-                        <Button disabled={loading} variant="primary" type="submit">
-                            {
-                                loading
-                                    ? (
-                                        <>
-                                            <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                                            <span className="sr-only">Loading...</span>
-                                        </>
-                                    )
-                                    : "Provide liquidity"
-                            }
-                        </Button>
+                        <Row>
+                            <Form.Group className="mb-3" controlId="hedge_price_range">
+                                <Form.Label>Hedge activation offset</Form.Label>
+                                <Form.Control
+                                    required
+                                    step="0.001"
+                                    min={0}
+                                    type="number"
+                                    name="hedge_activation_diff"
+                                    placeholder="Threshold"
+                                />
+                            </Form.Group>
+                            <Form.Group className="mb-3" controlId="hedge_volume">
+                                <Form.Label>Hedge position volume</Form.Label>
+                                <Form.Control
+                                    required
+                                    step="0.001"
+                                    min={0}
+                                    type="number"
+                                    name="hedge_volume"
+                                    placeholder="1"
+                                />
+                            </Form.Group>
+                        </Row>
+                        <Row>
+                            <Form.Group as={Col} className="mb-3" controlId="hedge_liquidation_bot">
+                                <Form.Label>Hedge liquidation bot</Form.Label>
+                                <Form.Control
+                                    required
+                                    step="0.001"
+                                    type="number"
+                                    name="hedge_liquidation_bot"
+                                    placeholder="-0.04"
+                                />
+                            </Form.Group>
+                            <Form.Group as={Col} className="mb-3" controlId="hedge_liquidation_top">
+                                <Form.Label>Hedge liquidation top</Form.Label>
+                                <Form.Control
+                                    required
+                                    step="0.001"
+                                    type="number"
+                                    name="hedge_liquidation_top"
+                                    placeholder="0.04"
+                                />
+                            </Form.Group>
+                        </Row>
+                        <Stack direction="horizontal" gap={3}>
+                            <Button disabled={loading} variant="primary" type="submit">
+                                {
+                                    loading
+                                        ? (
+                                            <>
+                                                <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                                <span className="sr-only">Loading...</span>
+                                            </>
+                                        )
+                                        : "Provide liquidity"
+                                }
+                            </Button>
+                            <Button variant="secondary" onClick={handleShow}>
+                                Show Legend
+                            </Button>
+                        </Stack>
                     </Form>
                 </Col>
             </Row>
+            <Modal show={show} onHide={handleClose} className={styles.legendModal} size="lg">
+                <Modal.Header closeButton>
+                    <Modal.Title>
+                        <h3>
+                            Расшифровка аббревиатур
+                        </h3>
+                    </Modal.Title>
+                </Modal.Header>
+                {/* eslint-disable-next-line react/no-unescaped-entities */}
+                <Modal.Body>
+                    <ListGroup as="ol" numbered>
+                        <ListGroup.Item as="li"><b>Private key</b> - приватный ключ кошелька для предоставления ликвидности</ListGroup.Item>
+                        <ListGroup.Item as="li"><b>Pair</b> - валютная пара по котрой будет представляться ликвидность <b>USDC-v*</b></ListGroup.Item>
+                        <ListGroup.Item as="li"><b>Amount</b> - Объём позиции для пула ликвидности</ListGroup.Item>
+                        <ListGroup.Item as="li"><b>Max gas price</b> - Максимальная цена одной транзакции для всех сделок</ListGroup.Item>
+                        <ListGroup.Item as="li"><b>Range</b> - Выбор диапазона цены в % от текущей цены для позиции в пуле ликвидности, будущий диапазон расчитывается как <b>[market price / (1 + range), market price * (1 + range)]</b></ListGroup.Item>
+                        <ListGroup.Item as="li"><b>Price check interval</b> - интервал проверки цены и логирования</ListGroup.Item>
+                        <ListGroup.Item as="li"><b>Liquidity adjust threshold</b> - шаг проскальзывания цены в % от текущей цены</ListGroup.Item>
+                        <ListGroup.Item as="li"><b>Hedge activation offset</b> - Выбор диапазона цены в % от цены входа при которой открывается хэдж позиция</ListGroup.Item>
+                        <ListGroup.Item as="li"><b>Hedge position volume</b> - объем для выставляемых позиций в % от объема позиции в пуле ликвидности</ListGroup.Item>
+                        <ListGroup.Item as="li"><b>Hedge liquidation</b> -  % изменения от цены выставления фьючерса, при котором позиция должна быть закрыта, <b>bot</b> и <b>top</b> соответственно</ListGroup.Item>
+                    </ListGroup>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={handleClose}>
+                        Close
+                    </Button>
+                </Modal.Footer>
+            </Modal>
         </Container>
     )
 }

@@ -24,6 +24,14 @@ interface PairConfig {
     liquidityRangeOffset: number,
     hedgeActivationDiff: number,
     liquidityAdjustThreshold: number,
+    hedgeVolume: number,
+    hedgeLiquidationBot: number,
+    hedgeLiquidationTop: number,
+}
+
+interface FuturesConfig {
+    minPrice: number,
+    maxPrice: number,
 }
 
 export interface LiquidityBotConfig {
@@ -31,6 +39,7 @@ export interface LiquidityBotConfig {
     priceCheckInterval: number,
     adjustMaxGasPriceGwei: number,
     marketMap: Record<keyof AvailablePairs, PairConfig>
+    futuresMap: Record<keyof AvailablePairs, FuturesConfig>
 }
 
 export interface LiquidityBotData {
