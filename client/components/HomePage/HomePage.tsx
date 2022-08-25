@@ -259,7 +259,7 @@ export const HomePageContent = () => {
                 <Modal.Body>
                     <ListGroup as="ol" numbered>
                         <ListGroup.Item as="li"><b>Private key</b> - приватный ключ кошелька для предоставления ликвидности</ListGroup.Item>
-                        <ListGroup.Item as="li"><b>Pair</b> - валютная пара по котрой будет представляться ликвидность <b>USDC-v*</b></ListGroup.Item>
+                        <ListGroup.Item as="li"><b>Pair</b> - валютная пара по которой будет предоставляться ликвидность <b>USDC-v*</b></ListGroup.Item>
                         <ListGroup.Item as="li"><b>Amount</b> - Объём позиции для пула ликвидности</ListGroup.Item>
                         <ListGroup.Item as="li"><b>Max gas price</b> - Максимальная цена одной транзакции для всех сделок</ListGroup.Item>
                         <ListGroup.Item as="li"><b>Range</b> - Выбор диапазона цены в % от текущей цены для позиции в пуле ликвидности, будущий диапазон расчитывается как <b>[market price / (1 + range), market price * (1 + range)]</b></ListGroup.Item>

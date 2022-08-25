@@ -40,5 +40,4 @@ export async function startLiquidityBot(config: LiquidityBotConfig, id: string =
     return
 }
 
-
 export const activeMakers = new Map<string, Maker>()

@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Button, Stack } from 'react-bootstrap'
-import { Printer, Sliders, SquareFill, CaretRightFill } from 'react-bootstrap-icons'
+import { Printer, SquareFill, XLg, CaretRightFill } from 'react-bootstrap-icons'
 import { LiquidityBotData } from '../../../../../common/types'
 import styles from './TableControls.module.scss'
 
@@ -11,7 +11,7 @@ interface ITableControlProps {
 export const TableControls: React.FC<ITableControlProps> = (props) => {
     const [isLoading, setIsLoading] = useState(false)
 
-    const handleBotStart = () => {
+    const handleStartBot = () => {
         setIsLoading(true)
         fetch(`/api/bot/${props.botData.id}/start`)
             .then(() => {
@@ -22,9 +22,20 @@ export const TableControls: React.FC<ITableControlProps> = (props) => {
             })
     }
 
-    const handleBotStop = () => {
+    const handleStopBot = () => {
         setIsLoading(true)
         fetch(`/api/bot/${props.botData.id}/stop`)
+            .then(() => {
+                setIsLoading(false)
+            })
+            .catch(() => {
+                setIsLoading(false)
+            })
+    }
+
+    const handleDeleteBot = () => {
+        setIsLoading(true)
+        fetch(`/api/bot/${props.botData.id}/delete`)
             .then(() => {
                 setIsLoading(false)
             })
@@ -36,11 +47,14 @@ export const TableControls: React.FC<ITableControlProps> = (props) => {
     return (
         <div className={styles.TableControls__wrapper}>
             <Stack gap={2} direction="horizontal" className={styles.TableControls}>
-                <Button variant="secondary" size="sm" href={`/${props.botData.id}`}>
-                    <Sliders color="white" size={10}/>
-                </Button>
+                {/*<Button variant="secondary" size="sm" href={`/${props.botData.id}`}>*/}
+                {/*    <Sliders color="white" size={10}/>*/}
+                {/*</Button>*/}
                 <Button variant="secondary" size="sm" href={`/${props.botData.id}/logs`}>
                     <Printer color="white" size={10}/>
+                </Button>
+                <Button variant="secondary" size="sm" onClick={() => handleDeleteBot()}>
+                    <XLg color="white" size={10}/>
                 </Button>
                 <Button
                     disabled={isLoading}
@@ -48,9 +62,9 @@ export const TableControls: React.FC<ITableControlProps> = (props) => {
                     variant="secondary"
                     onClick={() => {
                         if (props.botData.status) {
-                            handleBotStop()
+                            handleStopBot()
                         } else {
-                            handleBotStart()
+                            handleStartBot()
                         }
                     }}
                 >
