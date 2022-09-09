@@ -17,7 +17,7 @@ export class Maker extends BotService {
     readonly log = Log.getLogger(Maker.name)
 
     private wallet!: ethers.Wallet
-    private marketMap: { [key: string]: Market } = {}
+    public marketMap: { [key: string]: Market } = {}
     private marketOrderMap: { [key: string]: OpenOrder&{entryPrice?: Big} } = {}
 
     setConfig = (config: LiquidityBotConfig) => {

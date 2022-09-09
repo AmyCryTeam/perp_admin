@@ -34,18 +34,24 @@ export default function handler(
 
   if (req.method === "GET") {
     const makers = Array.from(activeMakers.keys())
+    
+    let markets = null;
 
-    const response = makers.map((maker_uid) => {
+    const response = makers.map((maker_uid, index) => {
       const makerInstance = activeMakers.get(maker_uid)
+      
+      if (index === 0) {
+        markets = makerInstance?.marketMap;
+      }
 
       if (!makerInstance) {
         return;
       }
-
+      const key = Object.keys(makerInstance.marketMap)[index];
       return ({
         id: maker_uid,
         status: makerInstance.active,
-        config: makerInstance.config
+        config: makerInstance.marketMap[key]
       })
     }).filter(Boolean)
 
