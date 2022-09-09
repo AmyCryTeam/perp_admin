@@ -44,7 +44,7 @@ export const BotsPageContent = () => {
                                         return (
                                             <tr key={bot.id}>
                                                 <th scope="row">
-                                                    {Object.keys(bot.config.marketMap).join(", ")}
+                                                    {bot.config.name}
                                                     &nbsp;&nbsp;&nbsp;
                                                     {
                                                         bot.status
@@ -52,7 +52,7 @@ export const BotsPageContent = () => {
                                                             : <Badge bg="secondary">Disabled</Badge>
                                                     }
                                                 </th>
-                                                <td>{getLiquidityFromBot(bot)}</td>
+                                                <td>{bot.config.liquidityAmount}</td>
                                                 <td>
                                                     <TableControls botData={bot} />
                                                 </td>

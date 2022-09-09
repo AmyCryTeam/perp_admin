@@ -36,6 +36,8 @@ interface FuturesConfig {
 
 export interface LiquidityBotConfig {
     privateKey: string,
+    name: string,
+    liquidityAmount: string,
     priceCheckInterval: number,
     adjustMaxGasPriceGwei: number,
     marketMap: Record<keyof AvailablePairs, PairConfig>
