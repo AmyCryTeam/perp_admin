@@ -2,16 +2,21 @@ import { min } from "@perp/common/build/lib/bn"
 import { priceToTick, sleep, tickToPrice } from "@perp/common/build/lib/helper"
 import { Log } from "@perp/common/build/lib/loggers"
 import { BotService } from "@perp/common/build/lib/perp/BotService"
-import { AmountType, OpenOrder, Side } from '@perp/common/build/lib/perp/PerpService'
+import {AmountType, OpenOrder, PerpService, Side} from '@perp/common/build/lib/perp/PerpService'
 import Big from "big.js"
 import { ethers } from "ethers"
 import { Service } from "typedi"
 
 import { ErrorLogData, HistoryLog, LiquidityBotConfig, LogData, Market } from '../common/types'
+import {L2EthService} from "@perp/common/build/lib/eth/L2EthService";
+import {ServerProfile} from "@perp/common/build/lib/profile/ServerProfile";
+import {FtxService} from "@perp/common/build/lib/external/FtxService";
+import {GraphService} from "@perp/common/build/lib/graph/GraphService";
+import {SecretsManager} from "@perp/common/build/lib/secrets/SecretsManager";
 
 @Service()
 export class Maker extends BotService {
-    public active = false
+    public active: boolean;
     public config?: LiquidityBotConfig
     public logsHistory: Array<HistoryLog> = []
     readonly log = Log.getLogger(Maker.name)
@@ -20,8 +25,10 @@ export class Maker extends BotService {
     public marketMap: { [key: string]: Market } = {}
     private marketOrderMap: { [key: string]: OpenOrder&{entryPrice?: Big} } = {}
 
-    setConfig = (config: LiquidityBotConfig) => {
-        this.config = config
+    constructor(config: LiquidityBotConfig) {
+        super(new PerpService( new L2EthService( new ServerProfile), new ServerProfile), new L2EthService( new ServerProfile), new FtxService, new GraphService(new L2EthService( new ServerProfile)), new SecretsManager(new ServerProfile), new ServerProfile);
+        this.config = config;
+        this.active = false;
     }
 
     async setup(): Promise<void> {
@@ -98,20 +105,18 @@ export class Maker extends BotService {
 
     async stop(): Promise<void> {
         this.logInfo({ event: "Stop Maker Routine started", params: {} })
-
-        this.active = false
-
         for (const market of Object.values(this.marketMap)) {
-            this.logInfo({ event: "Stop token maker ", params: { token: market.baseToken } })
+            this.logInfo({ event: "Stop token this ", params: { token: market.baseToken } })
 
             await this.reducePosition(market)
-            const order = this.marketOrderMap[market.name]
+            const order = this.marketOrderMap[market.name];
             await this.removeOrder(market, order)
 
             this.logInfo({ event: "Stop token completed ", params: { token: market.baseToken } })
         }
 
         this.logInfo({ event: "Stop Maker Routine completed", params: {} })
+        this.active = false
     }
 
     async makerRoutine() {
@@ -126,7 +131,6 @@ export class Maker extends BotService {
                             event: "GasPriceExceed",
                             params: { gasPrice: +gasPrice, maxGasPrice: +adjustMaxGasPrice },
                         })
-
                         continue
                     }
 
@@ -140,7 +144,6 @@ export class Maker extends BotService {
                     })
                 }
             }
-
             await sleep(this.config!.priceCheckInterval * 1000)
         }
     }
@@ -235,7 +238,7 @@ export class Maker extends BotService {
         }
 
         // @ts-ignore
-        if (this.config.futuresMap[market.name]) {
+        if (this.config.futuresMap && this.config.futuresMap[market.name]) {
             // @ts-ignore
             if (this.config.futuresMap[market.name].max > marketPrice || this.config.futuresMap[market.name].min < marketPrice) {
                 await this.reducePosition(market)
@@ -294,8 +297,16 @@ export class Maker extends BotService {
                         market: market.name,
                     },
                 })
-                const marketPrice = this.marketOrderMap[market.name].entryPrice;
-                this.marketOrderMap[market.name] = { ...openOrders[0], entryPrice: marketPrice }
+
+                let marketPrice;
+                
+                if (this.marketOrderMap[market.name]) {
+                    marketPrice = this.marketOrderMap[market.name].entryPrice;
+                } else {
+                    marketPrice = await this.perpService.getMarketPrice(market.poolAddr);
+                }
+
+                this.marketOrderMap[market.name] = { ...openOrders[0], entryPrice: marketPrice };
                 break
             }
             default: {
@@ -308,6 +319,7 @@ export class Maker extends BotService {
                 process.exit(0)
             }
         }
+        console.log("refresh order")
     }
 
     async isValidOrder(market: Market, openOrder: OpenOrder): Promise<boolean> {
@@ -355,16 +367,14 @@ export class Maker extends BotService {
         })
         const quote = liquidityAmount.div(2)
         const base = liquidityAmount.div(2).div(marketPrice)
-
         await this.addLiquidity(this.wallet, market.baseToken, lowerTick, upperTick, base, quote, false)
-
         const newOpenOrder = await this.perpService.getOpenOrder(
             this.wallet.address,
             market.baseToken,
             lowerTick,
             upperTick,
         )
-
+        console.log("create order")
         return {
             upperTick: upperTick,
             lowerTick: lowerTick,

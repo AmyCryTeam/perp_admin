@@ -26,10 +26,9 @@ export default async function handler(
             return;
         }
 
-        await maker.start()
-
         res.status(200).json({ success: true, data: {} })
-        return;
+
+        await maker.start()
     }
 
     res.status(405).json({ success: false })

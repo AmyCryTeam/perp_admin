@@ -31,10 +31,10 @@ export async function startLiquidityBot(config: LiquidityBotConfig, id: string =
     process.on("uncaughtException", err => exitUncaughtError(err))
     process.on("unhandledRejection", reason => exitUncaughtError(reason))
 
-    const maker = Container.get(Maker)
-    maker.setConfig(config)
+    const maker = new Maker(config);
+
     await maker.setup()
-    activeMakers.set(id, maker)
+    activeMakers.set(id, maker);
     await maker.start()
 
     return

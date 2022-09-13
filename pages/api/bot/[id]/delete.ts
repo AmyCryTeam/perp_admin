@@ -26,7 +26,9 @@ export default async function handler(
             return;
         }
 
-        await maker.stop()
+        if (maker.active) {
+            await maker.stop();
+        }
         activeMakers.delete(botId)
 
         res.status(200).json({ success: true, data: {} })
