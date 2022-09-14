@@ -9,27 +9,37 @@ type Data = {
   error?: string
 }
 
-export default function handler(
+export default async function handler(
     req: NextApiRequest,
     res: NextApiResponse<Data>
 ) {
   if (req.method === "POST") {
-    const id = uid(10);
 
-    console.log(JSON.parse(req.body))
+      try {
+          const id = uid(10);
+          console.log(JSON.parse(req.body))
 
-    startLiquidityBot(JSON.parse(req.body), id)
+          const result = await startLiquidityBot(JSON.parse(req.body), id);
+          result.start();
 
-    res.status(200).json(
-        {
-          success: true,
-          data: {
-            id,
-          }
-        }
-    )
-
-    return;
+          return res.status(200).json(
+              {
+                  success: true,
+                  data: {
+                      id,
+                  }
+              }
+          )
+      } catch (error) {
+          return res.status(500).json(
+              {
+                  success: false,
+                  data: {
+                      error,
+                  }
+              }
+          )
+      }
   }
 
   if (req.method === "GET") {
