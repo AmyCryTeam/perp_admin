@@ -8,7 +8,7 @@ import { LiquidityBotConfig } from '../common/types'
 import { Maker } from "./Maker"
 initLog()
 
-export async function startLiquidityBot(config: LiquidityBotConfig, id: string = uid(10)): Promise<void> {
+export async function startLiquidityBot(config: LiquidityBotConfig, id: string = uid(10)): Promise<Maker> {
     console.log('process.env.!!!!!!!!!!!!!!!!', process.env.L2_WEB3_ENDPOINTS)
     
     process.env["STAGE"] = "production"
