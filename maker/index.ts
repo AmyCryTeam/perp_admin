@@ -11,8 +11,8 @@ initLog()
 export async function startLiquidityBot(config: LiquidityBotConfig, id: string = uid(10)): Promise<Maker> {
     console.log('process.env.!!!!!!!!!!!!!!!!', process.env.L2_WEB3_ENDPOINTS)
     
-    process.env["STAGE"] = "production"
-    process.env["NETWORK"] = "optimism"
+    // process.env["STAGE"] = "production"
+    // process.env["NETWORK"] = "optimism"
     const exitUncaughtError = async (err: any): Promise<void> => {
         const log = Log.getLogger("startLiquidityBot")
 
