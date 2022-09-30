@@ -7,13 +7,9 @@ import { LiquidityBotConfig } from '../common/types'
 import { Maker } from "./Maker"
 initLog()
 
-const isProduction = !!process.env.NEXT_PRODUCTION;
-
 export async function startLiquidityBot(config: LiquidityBotConfig, id: string = uid(10)): Promise<void> {
-    if (isProduction) {
-        process.env["STAGE"] = "production"
-        process.env["NETWORK"] = "optimism"
-    }
+    process.env["STAGE"] = "production"
+    process.env["NETWORK"] = "optimism"
 
     const exitUncaughtError = async (err: any): Promise<void> => {
         const log = Log.getLogger("startLiquidityBot")
