@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Badge, Button, Col, Container, Row, Table } from 'react-bootstrap'
 import { LiquidityBotData } from '../../../common/types'
 import { TableControls } from './components/TableControls/TableControls'
@@ -44,15 +44,15 @@ export const BotsPageContent = () => {
                                         return (
                                             <tr key={bot.id}>
                                                 <th scope="row">
-                                                    {bot.config.name}
+                                                    {bot?.config?.name}
                                                     &nbsp;&nbsp;&nbsp;
                                                     {
-                                                        bot.status
+                                                        bot?.status
                                                             ? <Badge bg="success">Active</Badge>
                                                             : <Badge bg="secondary">Disabled</Badge>
                                                     }
                                                 </th>
-                                                <td>{bot.config.liquidityAmount}</td>
+                                                <td>{bot?.config?.liquidityAmount}</td>
                                                 <td>
                                                     <TableControls botData={bot} />
                                                 </td>

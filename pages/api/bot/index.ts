@@ -19,8 +19,7 @@ export default async function handler(
           const id = uid(10);
           console.log(JSON.parse(req.body))
 
-          const result = await startLiquidityBot(JSON.parse(req.body), id);
-          result.start();
+          startLiquidityBot(JSON.parse(req.body), id);
 
           return res.status(200).json(
               {

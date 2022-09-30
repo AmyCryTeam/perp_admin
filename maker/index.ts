@@ -1,18 +1,20 @@
 import "reflect-metadata"
 import "dotenv-flow/config"
 import { Log, initLog } from "@perp/common/build/lib/loggers"
-import { Container } from "typedi"
 import { uid } from 'uid';
 import { LiquidityBotConfig } from '../common/types'
 
 import { Maker } from "./Maker"
 initLog()
 
-export async function startLiquidityBot(config: LiquidityBotConfig, id: string = uid(10)): Promise<Maker> {
-    console.log('process.env.!!!!!!!!!!!!!!!!', process.env.L2_WEB3_ENDPOINTS)
-    
-    process.env["STAGE"] = "production"
-    process.env["NETWORK"] = "optimism"
+const isProduction = !!process.env.NEXT_PRODUCTION;
+
+export async function startLiquidityBot(config: LiquidityBotConfig, id: string = uid(10)): Promise<void> {
+    if (isProduction) {
+        process.env["STAGE"] = "production"
+        process.env["NETWORK"] = "optimism"
+    }
+
     const exitUncaughtError = async (err: any): Promise<void> => {
         const log = Log.getLogger("startLiquidityBot")
 
@@ -34,11 +36,10 @@ export async function startLiquidityBot(config: LiquidityBotConfig, id: string =
     process.on("unhandledRejection", reason => exitUncaughtError(reason))
 
     const maker = new Maker(config);
-
-    await maker.setup()
     activeMakers.set(id, maker);
 
-    return maker;
+    await maker.setup()
+    await maker.start()
 }
 
 export const activeMakers = new Map<string, Maker>()

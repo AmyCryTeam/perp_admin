@@ -44,6 +44,10 @@ export const TableControls: React.FC<ITableControlProps> = (props) => {
             })
     }
 
+    if (!props.botData) {
+        return null;
+    }
+
     return (
         <div className={styles.TableControls__wrapper}>
             <Stack gap={2} direction="horizontal" className={styles.TableControls}>
