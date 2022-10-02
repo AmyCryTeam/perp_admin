@@ -29,7 +29,9 @@ export class Maker extends BotService {
         super(new PerpService( new L2EthService( new ServerProfile), new ServerProfile), new L2EthService( new ServerProfile), new FtxService, new GraphService(new L2EthService( new ServerProfile)), new SecretsManager(new ServerProfile), new ServerProfile);
         this.config = config;
         this.active = false;
+    }
 
+    async setup(): Promise<void> {
         if (!this.config) {
             this.log.jinfo({ event: "Error", params: { message: "Please provide config" } })
             return;
@@ -46,9 +48,6 @@ export class Maker extends BotService {
         }
 
         this.wallet = this.ethService.privateKeyToWallet(privateKey)
-    }
-
-    async setup(): Promise<void> {
         await this.createNonceMutex([this.wallet])
         await this.createMarketMap()
 
@@ -106,6 +105,8 @@ export class Maker extends BotService {
 
     async stop(): Promise<void> {
         this.logInfo({ event: "Stop Maker Routine started", params: {} })
+        this.active = false
+
         for (const market of Object.values(this.marketMap)) {
             this.logInfo({ event: "Stop token this ", params: { token: market.baseToken } })
 
@@ -117,7 +118,6 @@ export class Maker extends BotService {
         }
 
         this.logInfo({ event: "Stop Maker Routine completed", params: {} })
-        this.active = false
     }
 
     async makerRoutine() {
