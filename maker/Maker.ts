@@ -173,15 +173,25 @@ export class Maker extends BotService {
 
         // (marketprice - entryPrice)/((marketPrice+entryPrice)/2)
         const diff = marketPrice.minus(order.entryPrice).div(order.entryPrice).abs();
+        this.logInfo({ event: "Hedge market diff ", params: { diff: diff } })
 
         // @ts-ignore
         if (diff.gte(this.config.marketMap[market.name].hedgeActivationDiff)) {
+            this.logInfo({ event: "Hedge market diff greater that hedgeActivationDiff ", params: {
+                    diff,
+                    // @ts-ignore
+                    hedgeActivationDiff: this.config.marketMap[market.name].hedgeActivationDiff
+                }})
+
             const positionValue = await this.perpService.getTotalPositionValue(this.wallet.address, market.baseToken);
+            this.logInfo({ event: "Hedge position value ", params: { positionValue }});
+
             if (+positionValue !== 0) {
                 return;
             }
 
             const side = marketPrice.gt(order.entryPrice) ? Side.LONG : Side.SHORT
+            this.logInfo({ event: "Hedge position side ", params: { side }});
 
             if (+order.baseDebt === 0) {
                 await this.logError({
@@ -190,17 +200,6 @@ export class Maker extends BotService {
                 })
                 return;
             }
-
-            this.logInfo({
-                event: "Open futures position",
-                params: {
-                    market: market.name,
-                    marketPrice,
-                    liquidityAmount: market.liquidityAmount,
-                    value: Big(market.liquidityAmount).div(marketPrice),
-                    side: side,
-                },
-            })
 
             // @ts-ignore
             const estimatedPositionSize = market.liquidityAmount.times(this.config.marketMap[market.name].hedgeVolume)
@@ -212,6 +211,20 @@ export class Maker extends BotService {
             const min = marketPrice.minus(marketPrice.times(this.config.marketMap[market.name].hedgeLiquidationBot));
             // @ts-ignore
             const max = marketPrice.plus(marketPrice.times(this.config.marketMap[market.name].hedgeLiquidationTop));
+
+            this.logInfo({
+                event: "Open futures position",
+                params: {
+                    market: market.name,
+                    marketPrice,
+                    liquidityAmount: market.liquidityAmount,
+                    value: Big(market.liquidityAmount).div(marketPrice),
+                    side: side,
+                    min,
+                    max,
+                    hedgePositionSize,
+                },
+            })
 
             await this.openPosition(
                 this.wallet,
@@ -240,11 +253,27 @@ export class Maker extends BotService {
 
         // @ts-ignore
         if (this.config.futuresMap && this.config.futuresMap[market.name]) {
+            this.logInfo({ event: "Check open futures to reduce" })
             // @ts-ignore
             if (this.config.futuresMap[market.name].max > marketPrice || this.config.futuresMap[market.name].min < marketPrice) {
+                this.logInfo({
+                    event: "Reduce futures position",
+                    params: {
+                        marketPrice,
+                        // @ts-ignore
+                        max: this.config.futuresMap[market.name].max,
+                        // @ts-ignore
+                        min: this.config.futuresMap[market.name].min,
+                    }
+                })
                 await this.reducePosition(market)
                 // @ts-ignore
                 delete this.config.futuresMap[market.name]
+
+                this.logInfo({
+                    event: "Successfully reduce futures position",
+                    params: {},
+                })
             }
         }
     }
