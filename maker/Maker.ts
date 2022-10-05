@@ -174,6 +174,7 @@ export class Maker extends BotService {
         // (marketprice - entryPrice)/((marketPrice+entryPrice)/2)
         const diff = marketPrice.minus(order.entryPrice).div(order.entryPrice).abs();
         this.logInfo({ event: "Hedge market diff ", params: { diff: diff } })
+        console.log('\n\n\n', {diff, marketPrice: marketPrice.toString(), entryPrice: order.entryPrice.toString() }, '\n\n\n')
 
         // @ts-ignore
         if (diff.gte(this.config.marketMap[market.name].hedgeActivationDiff)) {
