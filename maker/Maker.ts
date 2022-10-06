@@ -455,29 +455,64 @@ export class Maker extends BotService {
     }
 
     logError = (logErrorData: ErrorLogData) => {
+        const date = new Date();
+
         this.logsHistory.unshift({
-            date: new Date(),
+            date,
             data: logErrorData,
         })
 
+        sendDataToElastic(logErrorData, date, 'error')
         return this.log.jerror(logErrorData)
     }
 
     logInfo = (logData: LogData) => {
+        const date = new Date();
+
         this.logsHistory.unshift({
-            date: new Date(),
+            date,
             data: logData,
         })
 
+        sendDataToElastic(logData, date, 'info')
         return this.log.jinfo(logData)
     }
 
     logWarn = (logData: LogData) => {
+        const date = new Date();
+
         this.logsHistory.unshift({
-            date: new Date(),
+            date,
             data: logData,
         })
 
+        sendDataToElastic(logData, date, 'warn')
         return this.log.jwarn(logData)
     }
+}
+
+
+const sendDataToElastic = (content: any, date: any, type: any) => {
+    const logMeta = {
+        date,
+        type,
+    }
+
+    fetch('http://127.0.0.1:9200/log/content', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            logMeta,
+            content,
+        })
+    })
+        .then((res) => res.json())
+        .then((data) => {
+            console.log(data)
+        })
+        .catch((err) => {
+            console.log('err while send log', err)
+        })
 }
