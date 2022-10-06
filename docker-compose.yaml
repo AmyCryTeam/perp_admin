@@ -1,12 +1,12 @@
-version: '2'
+version: "3.7"
 services:
-  elasticsearch1:
-    image: docker.elastic.co/elasticsearch/elasticsearch:5.1.2
-    container_name: elasticsearch1
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.4.0
+    container_name: elasticsearch
+    restart: always
     environment:
-      - cluster.name=docker-cluster
-      - bootstrap.memory_lock=true
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - xpack.security.enabled=false
+      - discovery.type=single-node
     ulimits:
       memlock:
         soft: -1
@@ -14,43 +14,19 @@ services:
       nofile:
         soft: 65536
         hard: 65536
-    mem_limit: 1g
     cap_add:
       - IPC_LOCK
     volumes:
-      - esdata1:/usr/share/elasticsearch/data
+      - ./elasticsearch-data:/usr/share/elasticsearch/data
     ports:
       - 9200:9200
-    networks:
-      - esnet
-  elasticsearch2:
-    image: docker.elastic.co/elasticsearch/elasticsearch:5.1.2
+  kibana:
+    container_name: kibana
+    image: docker.elastic.co/kibana/kibana:7.4.0
+    restart: always
     environment:
-      - cluster.name=docker-cluster
-      - bootstrap.memory_lock=true
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-      - "discovery.zen.ping.unicast.hosts=elasticsearch1"
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
-      nofile:
-        soft: 65536
-        hard: 65536
-    mem_limit: 1g
-    cap_add:
-      - IPC_LOCK
-    volumes:
-      - esdata2:/usr/share/elasticsearch/data
-    networks:
-      - esnet
-
-volumes:
-  esdata1:
-    driver: local
-  esdata2:
-    driver: local
-
-networks:
-  esnet:
-    driver: bridge
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200    # address of elasticsearch docker container which kibana will connect
+    ports:
+      - 5601:5601
+    depends_on:
+      - elasticsearch                
