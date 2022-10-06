@@ -8,7 +8,7 @@ services:
       - cluster.name=docker-cluster
       - cluster.initial_master_nodes=elasticsearch1
       - bootstrap.memory_lock=true
-      - "ES_JAVA_OPTS=-Xms512m -Xms512m"
+      - "ES_JAVA_OPTS=-Xms256m -Xms256m"
       - http.cors.enabled=true
       - http.cors.allow-origin=*
       - network.host=_eth0_
@@ -24,13 +24,6 @@ services:
       update_config:
         parallelism: 1
         delay: 10s
-      resources:
-        limits:
-          cpus: '1'
-          memory: 256M
-        reservations:
-          cpus: '1'
-          memory: 1G
       restart_policy:
         condition: on-failure
         delay: 5s
@@ -54,7 +47,7 @@ services:
     container_name: kibana
     environment:
       SERVER_NAME: localhost
-      ELASTICSEARCH_URL: http://elasticsearch1:9200/
+      ELASTICSEARCH_URL: http://127.0.0.1:9200/
     ports:
       - 5601:5601
     volumes:
@@ -94,7 +87,7 @@ services:
     user: root
     environment:
       - setup.kibana.host=kibana:5601
-      - output.elasticsearch.hosts=["elasticsearch:9200"]
+      - output.elasticsearch.hosts=["127.0.0.1:9200"]
     cap_add: ['AUDIT_CONTROL', 'AUDIT_READ']
     pid: "host"
     volumes:
@@ -107,7 +100,7 @@ services:
     # command: --strict.perms=false
     environment:
       - setup.kibana.host=kibana:5601
-      - output.elasticsearch.hosts=["elasticsearch:9200"]
+      - output.elasticsearch.hosts=["127.0.0.1:9200"]
     cap_add:
       - AUDIT_CONTROL
       - AUDIT_READ
@@ -125,7 +118,7 @@ services:
     command: --strict.perms=false
     environment:
       - setup.kibana.host=kibana:5601
-      - output.elasticsearch.hosts=["elasticsearch:9200"]
+      - output.elasticsearch.hosts=["127.0.0.1:9200"]
     # volumes:
     #   - ${PWD}/configs/heartbeat.docker.yml:/usr/share/heartbeat/heartbeat.yml
     networks:
@@ -136,7 +129,7 @@ services:
     command: --strict.perms=false
     environment:
       - setup.kibana.host=kibana:5601
-      - output.elasticsearch.hosts=["elasticsearch:9200"]
+      - output.elasticsearch.hosts=["127.0.0.1:9200"]
     cap_add:
       - NET_RAW
       - NET_ADMIN
@@ -150,7 +143,7 @@ services:
     command: --strict.perms=false
     environment:
       - setup.kibana.host=kibana:5601
-      - output.elasticsearch.hosts=["elasticsearch:9200"]
+      - output.elasticsearch.hosts=["127.0.0.1:9200"]
     ports:
       - 9000:9000
     volumes:
@@ -168,7 +161,7 @@ services:
     environment:
       - apm-server.host=0.0.0.0
       - setup.kibana.host=kibana:5601
-      - output.elasticsearch.hosts=["elasticsearch:9200"]
+      - output.elasticsearch.hosts=["127.0.0.1:9200"]
     # volumes:
     #   - ${PWD}/configs/apm-server.yml:/usr/share/apm-server/apm-server.yml
     networks:
@@ -179,7 +172,7 @@ services:
       - 3002:3002
     environment:
       secret_session_key: supersecretsessionkey
-      elasticsearch.host: http://elasticsearch1:9200/
+      elasticsearch.host: http://127.0.0.1:9200/
       allow_es_settings_modification: "true"
     networks:
       - elastic
