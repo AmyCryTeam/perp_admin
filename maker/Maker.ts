@@ -1,18 +1,18 @@
-import { min } from "@perp/common/build/lib/bn"
-import { priceToTick, sleep, tickToPrice } from "@perp/common/build/lib/helper"
-import { Log } from "@perp/common/build/lib/loggers"
-import { BotService } from "@perp/common/build/lib/perp/BotService"
-import {AmountType, OpenOrder, PerpService, Side} from '@perp/common/build/lib/perp/PerpService'
-import Big from "big.js"
-import { ethers } from "ethers"
-import { Service } from "typedi"
+import { min } from '@perp/common/build/lib/bn'
+import { L2EthService } from '@perp/common/build/lib/eth/L2EthService'
+import { FtxService } from '@perp/common/build/lib/external/FtxService'
+import { GraphService } from '@perp/common/build/lib/graph/GraphService'
+import { priceToTick, sleep, tickToPrice } from '@perp/common/build/lib/helper'
+import { Log } from '@perp/common/build/lib/loggers'
+import { BotService } from '@perp/common/build/lib/perp/BotService'
+import { AmountType, OpenOrder, PerpService, Side } from '@perp/common/build/lib/perp/PerpService'
+import { ServerProfile } from '@perp/common/build/lib/profile/ServerProfile'
+import { SecretsManager } from '@perp/common/build/lib/secrets/SecretsManager'
+import Big from 'big.js'
+import { ethers } from 'ethers'
+import { Service } from 'typedi'
 
 import { ErrorLogData, HistoryLog, LiquidityBotConfig, LogData, Market } from '../common/types'
-import {L2EthService} from "@perp/common/build/lib/eth/L2EthService";
-import {ServerProfile} from "@perp/common/build/lib/profile/ServerProfile";
-import {FtxService} from "@perp/common/build/lib/external/FtxService";
-import {GraphService} from "@perp/common/build/lib/graph/GraphService";
-import {SecretsManager} from "@perp/common/build/lib/secrets/SecretsManager";
 
 @Service()
 export class Maker extends BotService {
@@ -171,7 +171,6 @@ export class Maker extends BotService {
             return;
         }
 
-        // (marketprice - entryPrice)/((marketPrice+entryPrice)/2)
         const diff = marketPrice.minus(order.entryPrice).div(order.entryPrice).abs();
         this.logInfo({ event: "Hedge market diff ", params: { diff: diff, marketPrice: marketPrice.toString(), entryPrice: order.entryPrice.toString() } });
 
@@ -187,6 +186,12 @@ export class Maker extends BotService {
             this.logInfo({ event: "Hedge position value ", params: { positionValue }});
 
             if (+positionValue !== 0) {
+                this.logInfo({ event: "Cannot open order of position value is not equal zero", params: {
+                        positionValue: +positionValue,
+                        // @ts-ignore
+                        hedgeActivationDiff: this.config.marketMap[market.name].hedgeActivationDiff
+                    }})
+
                 return;
             }
 
@@ -207,10 +212,18 @@ export class Maker extends BotService {
                 ? estimatedPositionSize
                 : market.liquidityAmount
 
-            // @ts-ignore
-            const min = marketPrice.minus(marketPrice.times(this.config.marketMap[market.name].hedgeLiquidationBot));
-            // @ts-ignore
-            const max = marketPrice.plus(marketPrice.times(this.config.marketMap[market.name].hedgeLiquidationTop));
+            const { upperAdjustPrice, lowerAdjustPrice } = await this.getOrderSidePrices(market, order);
+            let min, max;
+
+            if (side === Side.LONG) {
+                // @ts-ignore
+                min = marketPrice.minus(marketPrice.times(this.config.marketMap[market.name].hedgeLiquidationLong));
+                max = upperAdjustPrice;
+            } else {
+                min = lowerAdjustPrice
+                // @ts-ignore
+                max = marketPrice.plus(marketPrice.times(this.config.marketMap[market.name].hedgeLiquidationShort));
+            }
 
             this.logInfo({
                 event: "Open futures position",
@@ -239,7 +252,8 @@ export class Maker extends BotService {
             // @ts-ignore
             this.config.futuresMap[market.name] = {
                 min,
-                max
+                max,
+                positionEntryPrice: marketPrice,
             }
         } else {
             const positionValue = await this.perpService.getTotalPositionValue(this.wallet.address, market.baseToken);
@@ -353,14 +367,26 @@ export class Maker extends BotService {
     }
 
     async isValidOrder(market: Market, openOrder: OpenOrder): Promise<boolean> {
-        const marketPrice = await this.perpService.getMarketPrice(market.poolAddr)
+        const marketPrice = await this.perpService.getMarketPrice(market.poolAddr);
+        const {
+            upperAdjustPrice,
+            lowerAdjustPrice,
+        } = await this.getOrderSidePrices(market, openOrder);
+
+        return marketPrice.gt(lowerAdjustPrice) && marketPrice.lt(upperAdjustPrice);
+    }
+
+    async getOrderSidePrices(market: Market, openOrder: OpenOrder): Promise<{ upperAdjustPrice: Big, lowerAdjustPrice: Big }> {
         const upperPrice = tickToPrice(openOrder.upperTick)
         const lowerPrice = tickToPrice(openOrder.lowerTick)
         const centralPrice = upperPrice.mul(lowerPrice).sqrt()
         const upperAdjustPrice = centralPrice.mul(market.liquidityAdjustMultiplier)
         const lowerAdjustPrice = centralPrice.div(market.liquidityAdjustMultiplier)
 
-        return marketPrice.gt(lowerAdjustPrice) && marketPrice.lt(upperAdjustPrice)
+        return {
+            upperAdjustPrice,
+            lowerAdjustPrice,
+        }
     }
 
     async createOrder(market: Market): Promise<OpenOrder&{entryPrice:Big}> {
@@ -490,7 +516,6 @@ export class Maker extends BotService {
         return this.log.jwarn(logData)
     }
 }
-
 
 const sendDataToElastic = (content: any, date: any, type: any) => {
     const logMeta = {

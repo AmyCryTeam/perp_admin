@@ -25,8 +25,8 @@ interface PairConfig {
     hedgeActivationDiff: number,
     liquidityAdjustThreshold: number,
     hedgeVolume: number,
-    hedgeLiquidationBot: number,
-    hedgeLiquidationTop: number,
+    hedgeLiquidationLong: number,
+    hedgeLiquidationShort: number,
 }
 
 interface FuturesConfig {

@@ -58,9 +58,9 @@ export const HomePageContent = () => {
                     //@ts-ignore
                     hedgeVolume: e.target?.hedge_volume.value,
                     //@ts-ignore
-                    hedgeLiquidationBot: e.target?.hedge_liquidation_bot.value,
+                    hedgeLiquidationLong: e.target?.hedge_liquidation_long.value,
                     //@ts-ignore
-                    hedgeLiquidationTop: e.target?.hedge_liquidation_top.value,
+                    hedgeLiquidationShort: e.target?.hedge_liquidation_short.value,
                 }
             }
         }
@@ -206,23 +206,23 @@ export const HomePageContent = () => {
                             </Form.Group>
                         </Row>
                         <Row>
-                            <Form.Group as={Col} className="mb-3" controlId="hedge_liquidation_bot">
-                                <Form.Label>Hedge liquidation bot</Form.Label>
+                            <Form.Group as={Col} className="mb-3" controlId="hedge_liquidation_long">
+                                <Form.Label>Hedge liquidation Long</Form.Label>
                                 <Form.Control
                                     required
                                     step="0.001"
                                     type="number"
-                                    name="hedge_liquidation_bot"
+                                    name="hedge_liquidation_long"
                                     placeholder="-0.04"
                                 />
                             </Form.Group>
-                            <Form.Group as={Col} className="mb-3" controlId="hedge_liquidation_top">
-                                <Form.Label>Hedge liquidation top</Form.Label>
+                            <Form.Group as={Col} className="mb-3" controlId="hedge_liquidation_short">
+                                <Form.Label>Hedge liquidation Short</Form.Label>
                                 <Form.Control
                                     required
                                     step="0.001"
                                     type="number"
-                                    name="hedge_liquidation_top"
+                                    name="hedge_liquidation_short"
                                     placeholder="0.04"
                                 />
                             </Form.Group>
