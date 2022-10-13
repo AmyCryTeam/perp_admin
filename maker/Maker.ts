@@ -269,7 +269,7 @@ export class Maker extends BotService {
         if (this.config.futuresMap && this.config.futuresMap[market.name]) {
             this.logInfo({ event: "Check open futures to reduce" })
             // @ts-ignore
-            if (this.config.futuresMap[market.name].max > marketPrice || this.config.futuresMap[market.name].min < marketPrice) {
+            if (marketPrice > this.config.futuresMap[market.name].max || marketPrice < this.config.futuresMap[market.name].min) {
                 this.logInfo({
                     event: "Reduce futures position",
                     params: {
