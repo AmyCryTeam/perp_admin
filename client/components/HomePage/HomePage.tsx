@@ -142,7 +142,7 @@ export const HomePageContent = () => {
                                 <Form.Label>Range</Form.Label>
                                 <Form.Control
                                     required
-                                    step="0.001"
+                                    step="0.00001"
                                     min={0}
                                     type="number"
                                     placeholder="0.4"
@@ -165,7 +165,7 @@ export const HomePageContent = () => {
                                 <Form.Label>Liquidity adjust threshold</Form.Label>
                                 <Form.Control
                                     required
-                                    step="0.001"
+                                    step="0.00001"
                                     min={0}
                                     type="number"
                                     name="liquidity_threshold"
@@ -186,7 +186,7 @@ export const HomePageContent = () => {
                                 <Form.Label>Hedge activation offset</Form.Label>
                                 <Form.Control
                                     required
-                                    step="0.001"
+                                    step="0.00001"
                                     min={0}
                                     type="number"
                                     name="hedge_activation_diff"
@@ -197,7 +197,7 @@ export const HomePageContent = () => {
                                 <Form.Label>Hedge position volume</Form.Label>
                                 <Form.Control
                                     required
-                                    step="0.001"
+                                    step="0.00001"
                                     min={0}
                                     type="number"
                                     name="hedge_volume"
@@ -210,7 +210,7 @@ export const HomePageContent = () => {
                                 <Form.Label>Hedge liquidation Long</Form.Label>
                                 <Form.Control
                                     required
-                                    step="0.001"
+                                    step="0.00001"
                                     type="number"
                                     name="hedge_liquidation_long"
                                     placeholder="-0.04"
@@ -220,7 +220,7 @@ export const HomePageContent = () => {
                                 <Form.Label>Hedge liquidation Short</Form.Label>
                                 <Form.Control
                                     required
-                                    step="0.001"
+                                    step="0.00001"
                                     type="number"
                                     name="hedge_liquidation_short"
                                     placeholder="0.04"
