@@ -182,12 +182,12 @@ export class Maker extends BotService {
                     hedgeActivationDiff: this.config.marketMap[market.name].hedgeActivationDiff
                 }})
 
-            const positionValue = await this.perpService.getTotalPositionValue(this.wallet.address, market.baseToken);
-            this.logInfo({ event: "Hedge position value ", params: { positionValue }});
+            const totalOpenPositions = Object.keys(this.config.futuresMap).length;
+            this.logInfo({ event: "Total open position ", params: { totalOpenPositions }});
 
-            if (+positionValue !== 0) {
-                this.logInfo({ event: "Cannot open order of position value is not equal zero", params: {
-                        positionValue: +positionValue,
+            if (totalOpenPositions > 0) {
+                this.logInfo({ event: "Cannot open order of total open position value is not equal zero", params: {
+                        totalPositions: totalOpenPositions,
                         // @ts-ignore
                         hedgeActivationDiff: this.config.marketMap[market.name].hedgeActivationDiff
                     }})
@@ -255,14 +255,6 @@ export class Maker extends BotService {
                 max,
                 positionEntryPrice: marketPrice,
             }
-        } else {
-            const positionValue = await this.perpService.getTotalPositionValue(this.wallet.address, market.baseToken);
-
-            if (+positionValue !== 0) {
-                return;
-            }
-
-            await this.reducePosition(market)
         }
 
         // @ts-ignore
@@ -270,6 +262,8 @@ export class Maker extends BotService {
             this.logInfo({ event: "Check open futures to reduce" })
             // @ts-ignore
             if (marketPrice > this.config.futuresMap[market.name].max || marketPrice < this.config.futuresMap[market.name].min) {
+                await this.removeOrder(market, order);
+
                 this.logInfo({
                     event: "Reduce futures position",
                     params: {
@@ -279,7 +273,8 @@ export class Maker extends BotService {
                         // @ts-ignore
                         min: this.config.futuresMap[market.name].min,
                     }
-                })
+                });
+
                 await this.reducePosition(market)
                 // @ts-ignore
                 delete this.config.futuresMap[market.name]
