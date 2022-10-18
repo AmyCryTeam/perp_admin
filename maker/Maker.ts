@@ -176,13 +176,13 @@ export class Maker extends BotService {
 
         // @ts-ignore
         if (diff.gte(this.config.marketMap[market.name].hedgeActivationDiff)) {
-            this.logInfo({ event: "Hedge market diff greater that hedgeActivationDiff ", params: {
+            this.logInfo({ event: "Hedge market diff greater than hedgeActivationDiff ", params: {
                     diff,
                     // @ts-ignore
                     hedgeActivationDiff: this.config.marketMap[market.name].hedgeActivationDiff
                 }})
 
-            const totalOpenPositions = Object.keys(this.config.futuresMap).length;
+            const totalOpenPositions = Object.keys(this.config.futuresMap || {}).length;
             this.logInfo({ event: "Total open position ", params: { totalOpenPositions }});
 
             if (totalOpenPositions > 0) {
