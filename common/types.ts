@@ -41,7 +41,7 @@ export interface LiquidityBotConfig {
     priceCheckInterval: number,
     adjustMaxGasPriceGwei: number,
     marketMap: Record<keyof AvailablePairs, PairConfig>
-    futuresMap: Record<keyof AvailablePairs, FuturesConfig>
+    futuresMap: Record<keyof AvailablePairs, FuturesConfig> | {}
 }
 
 export interface LiquidityBotData {

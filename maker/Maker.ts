@@ -27,7 +27,7 @@ export class Maker extends BotService {
 
     constructor(config: LiquidityBotConfig) {
         super(new PerpService( new L2EthService( new ServerProfile), new ServerProfile), new L2EthService( new ServerProfile), new FtxService, new GraphService(new L2EthService( new ServerProfile)), new SecretsManager(new ServerProfile), new ServerProfile);
-        this.config = config;
+        this.config = {...config, futuresMap: {}};
         this.active = false;
     }
 
@@ -171,29 +171,31 @@ export class Maker extends BotService {
             return;
         }
 
+        const totalOpenPositions = Object.keys(this.config.futuresMap || {}).length;
+
         const diff = marketPrice.minus(order.entryPrice).div(order.entryPrice).abs();
         this.logInfo({ event: "Hedge market diff ", params: { diff: diff, marketPrice: marketPrice.toString(), entryPrice: order.entryPrice.toString() } });
 
         // @ts-ignore
-        if (diff.gte(this.config.marketMap[market.name].hedgeActivationDiff)) {
+        if (diff.gte(this.config.marketMap[market.name].hedgeActivationDiff) && totalOpenPositions === 0) {
             this.logInfo({ event: "Hedge market diff greater than hedgeActivationDiff ", params: {
                     diff,
                     // @ts-ignore
                     hedgeActivationDiff: this.config.marketMap[market.name].hedgeActivationDiff
                 }})
 
-            const totalOpenPositions = Object.keys(this.config.futuresMap || {}).length;
+            // прологировать историю закрытия позиций
             this.logInfo({ event: "Total open position ", params: { totalOpenPositions }});
 
-            if (totalOpenPositions > 0) {
-                this.logInfo({ event: "Cannot open order of total open position value is not equal zero", params: {
-                        totalPositions: totalOpenPositions,
-                        // @ts-ignore
-                        hedgeActivationDiff: this.config.marketMap[market.name].hedgeActivationDiff
-                    }})
-
-                return;
-            }
+            // if (totalOpenPositions > 0) { // если фьюч был открыт, не открывать новый
+            //     this.logInfo({ event: "Cannot open order of total open position value is not equal zero", params: {
+            //             totalPositions: totalOpenPositions,
+            //             // @ts-ignore
+            //             hedgeActivationDiff: this.config.marketMap[market.name].hedgeActivationDiff
+            //         }})
+            //
+            //     return;
+            // }
 
             const side = marketPrice.gt(order.entryPrice) ? Side.LONG : Side.SHORT
             this.logInfo({ event: "Hedge position side ", params: { side }});
@@ -261,30 +263,37 @@ export class Maker extends BotService {
         if (this.config.futuresMap && this.config.futuresMap[market.name]) {
             this.logInfo({ event: "Check open futures to reduce" })
             // @ts-ignore
-            if (marketPrice > this.config.futuresMap[market.name].max || marketPrice < this.config.futuresMap[market.name].min) {
-                await this.removeOrder(market, order);
+            const {max, min} = this.config.futuresMap[market.name];
 
-                this.logInfo({
-                    event: "Reduce futures position",
-                    params: {
-                        marketPrice,
-                        // @ts-ignore
-                        max: this.config.futuresMap[market.name].max,
-                        // @ts-ignore
-                        min: this.config.futuresMap[market.name].min,
-                    }
-                });
+            if (marketPrice > max) { // разбить на макс и мин
+                await this.reduceFuturePositions(market, order, marketPrice, {max})
+            }
 
-                await this.reducePosition(market)
-                // @ts-ignore
-                delete this.config.futuresMap[market.name]
-
-                this.logInfo({
-                    event: "Successfully reduce futures position",
-                    params: {},
-                })
+            if (marketPrice < min) {
+                await this.reduceFuturePositions(market, order, marketPrice, {min})
             }
         }
+    }
+
+    async reduceFuturePositions(market: Market, order: OpenOrder, marketPrice: any, params: { [key: string]: any }) {
+        await this.removeOrder(market, order);
+
+        this.logInfo({
+            event: `Reduce futures ${Object.keys(params)[0]} position`,
+            params: {
+                marketPrice,
+                ...params
+            }
+        });
+
+        await this.reducePosition(market)
+        // @ts-ignore
+        delete this.config.futuresMap[market.name]
+
+        this.logInfo({
+            event: "Successfully reduce futures position",
+            params: {},
+        })
     }
 
     async reducePosition(market: Market) {
@@ -518,7 +527,7 @@ const sendDataToElastic = (content: any, date: any, type: any) => {
         type,
     }
 
-    fetch('http://127.0.0.1:9200/log/content', {
+   /* fetch('http://127.0.0.1:9200/log/content', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -534,5 +543,5 @@ const sendDataToElastic = (content: any, date: any, type: any) => {
         })
         .catch((err) => {
             console.log('err while send log', err)
-        })
+        })*/
 }
