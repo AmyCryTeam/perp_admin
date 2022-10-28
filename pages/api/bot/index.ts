@@ -51,10 +51,16 @@ export default async function handler(
         return;
       }
       const key = Object.keys(makerInstance.marketMap)[0];
-      return ({
+
+      // @ts-ignore
+        const {priceCheckInterval, adjustMaxGasPriceGwei} = makerInstance.config;
+
+        return ({
         id: maker_uid,
         status: makerInstance.active,
-        config: makerInstance.marketMap[key]
+        config: makerInstance.marketMap[key],
+        // @ts-ignore
+        configBot: {...makerInstance.config?.marketMap[key], priceCheckInterval, MaxGasPrice: adjustMaxGasPriceGwei}
       })
     }).filter(Boolean)
 

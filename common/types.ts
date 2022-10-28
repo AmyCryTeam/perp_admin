@@ -47,7 +47,8 @@ export interface LiquidityBotConfig {
 export interface LiquidityBotData {
     id: string,
     status: "Active" | "Disabled",
-    config: LiquidityBotConfig
+    config: LiquidityBotConfig,
+    configBot: PairConfig
 }
 
 export interface LogData {

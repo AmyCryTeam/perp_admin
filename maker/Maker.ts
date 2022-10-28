@@ -37,10 +37,6 @@ export class Maker extends BotService {
             return;
         }
 
-        this.logInfo({
-            event: "SetupMaker",
-        })
-
         const privateKey = this.config.privateKey
 
         if (!privateKey) {
@@ -50,14 +46,6 @@ export class Maker extends BotService {
         this.wallet = this.ethService.privateKeyToWallet(privateKey)
         await this.createNonceMutex([this.wallet])
         await this.createMarketMap()
-
-        this.logInfo({
-            event: "Maker",
-            params: {
-                address: this.wallet.address,
-                nextNonce: this.addrNonceMutexMap[this.wallet.address].nextNonce,
-            },
-        })
     }
 
     async createMarketMap() {
@@ -92,8 +80,6 @@ export class Maker extends BotService {
 
         const balance = await this.perpService.getUSDCBalance(this.wallet.address)
 
-        this.logInfo({ event: "CheckUSDCBalance", params: { balance: +balance } })
-
         if (balance.gt(0)) {
             await this.approve(this.wallet, balance)
             await this.deposit(this.wallet, balance)
@@ -104,20 +90,14 @@ export class Maker extends BotService {
     }
 
     async stop(): Promise<void> {
-        this.logInfo({ event: "Stop Maker Routine started", params: {} })
         this.active = false
 
         for (const market of Object.values(this.marketMap)) {
-            this.logInfo({ event: "Stop token this ", params: { token: market.baseToken } })
-
             await this.reducePosition(market)
             const order = this.marketOrderMap[market.name];
             await this.removeOrder(market, order)
-
-            this.logInfo({ event: "Stop token completed ", params: { token: market.baseToken } })
         }
 
-        this.logInfo({ event: "Stop Maker Routine completed", params: {} })
     }
 
     async makerRoutine() {
@@ -174,7 +154,6 @@ export class Maker extends BotService {
         const totalOpenPositions = Object.keys(this.config.futuresMap || {}).length;
 
         const diff = marketPrice.minus(order.entryPrice).div(order.entryPrice).abs();
-        this.logInfo({ event: "Hedge market diff ", params: { diff: diff, marketPrice: marketPrice.toString(), entryPrice: order.entryPrice.toString() } });
 
         // @ts-ignore
         if (diff.gte(this.config.marketMap[market.name].hedgeActivationDiff) && totalOpenPositions === 0) {
@@ -184,21 +163,7 @@ export class Maker extends BotService {
                     hedgeActivationDiff: this.config.marketMap[market.name].hedgeActivationDiff
                 }})
 
-            // прологировать историю закрытия позиций
-            this.logInfo({ event: "Total open position ", params: { totalOpenPositions }});
-
-            // if (totalOpenPositions > 0) { // если фьюч был открыт, не открывать новый
-            //     this.logInfo({ event: "Cannot open order of total open position value is not equal zero", params: {
-            //             totalPositions: totalOpenPositions,
-            //             // @ts-ignore
-            //             hedgeActivationDiff: this.config.marketMap[market.name].hedgeActivationDiff
-            //         }})
-            //
-            //     return;
-            // }
-
             const side = marketPrice.gt(order.entryPrice) ? Side.LONG : Side.SHORT
-            this.logInfo({ event: "Hedge position side ", params: { side }});
 
             if (+order.baseDebt === 0) {
                 await this.logError({
@@ -261,7 +226,6 @@ export class Maker extends BotService {
 
         // @ts-ignore
         if (this.config.futuresMap && this.config.futuresMap[market.name]) {
-            this.logInfo({ event: "Check open futures to reduce" })
             // @ts-ignore
             const {max, min} = this.config.futuresMap[market.name];
 
@@ -278,22 +242,9 @@ export class Maker extends BotService {
     async reduceFuturePositions(market: Market, order: OpenOrder, marketPrice: any, params: { [key: string]: any }) {
         await this.removeOrder(market, order);
 
-        this.logInfo({
-            event: `Reduce futures ${Object.keys(params)[0]} position`,
-            params: {
-                marketPrice,
-                ...params
-            }
-        });
-
         await this.reducePosition(market)
         // @ts-ignore
         delete this.config.futuresMap[market.name]
-
-        this.logInfo({
-            event: "Successfully reduce futures position",
-            params: {},
-        })
     }
 
     async reducePosition(market: Market) {
@@ -316,36 +267,12 @@ export class Maker extends BotService {
             throw Error("account has more than 1 orders")
         }
 
-        for (const openOrder of openOrders) {
-            this.logInfo({
-                event: "GetOpenOrders",
-                params: {
-                    market: market.name,
-                    lowerPrice: tickToPrice(openOrder.lowerTick),
-                    upperPrice: tickToPrice(openOrder.upperTick),
-                },
-            })
-        }
-
         switch (openOrders.length) {
             case 0: {
-                this.logInfo({
-                    event: "Create new Order",
-                    params: {
-                        market: market.name,
-                    },
-                })
                 this.marketOrderMap[market.name] = await this.createOrder(market)
                 break
             }
             case 1: {
-                this.logInfo({
-                    event: "Update order",
-                    params: {
-                        market: market.name,
-                    },
-                })
-
                 let marketPrice;
 
                 if (this.marketOrderMap[market.name]) {
@@ -358,16 +285,10 @@ export class Maker extends BotService {
                 break
             }
             default: {
-                // abnormal case, remove all orders manually
-                await this.logError({
-                    event: "RefreshOrderError",
-                    params: { err: new Error("RefreshOrderError"), openOrders },
-                })
                 //await Promise.all(orders.map(order => this.removeOrder(market, order)))
                 process.exit(0)
             }
         }
-        console.log("refresh order")
     }
 
     async isValidOrder(market: Market, openOrder: OpenOrder): Promise<boolean> {
@@ -434,10 +355,10 @@ export class Maker extends BotService {
             lowerTick,
             upperTick,
         )
-        console.log("create order")
+
         return {
-            upperTick: upperTick,
-            lowerTick: lowerTick,
+            upperTick: +upperPrice,
+            lowerTick: +lowerPrice,
             liquidity: newOpenOrder.liquidity,
             baseDebt: newOpenOrder.baseDebt,
             quoteDebt: newOpenOrder.quoteDebt,
@@ -467,14 +388,6 @@ export class Maker extends BotService {
 
     async adjustLiquidity(market: Market): Promise<void> {
         const order = this.marketOrderMap[market.name]
-        this.logInfo({
-            event: "AdjustOrder",
-            params: {
-                market: market.name,
-                upperPrice: +tickToPrice(order.upperTick),
-                lowerPrice: +tickToPrice(order.lowerTick),
-            },
-        })
 
         if (!(await this.isValidOrder(market, order))) {
             await this.removeOrder(market, order)
