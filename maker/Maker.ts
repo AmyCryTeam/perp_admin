@@ -37,6 +37,10 @@ export class Maker extends BotService {
             return;
         }
 
+        this.logInfo({
+            event: "SetupMaker",
+        })
+
         const privateKey = this.config.privateKey
 
         if (!privateKey) {
@@ -46,6 +50,14 @@ export class Maker extends BotService {
         this.wallet = this.ethService.privateKeyToWallet(privateKey)
         await this.createNonceMutex([this.wallet])
         await this.createMarketMap()
+
+        this.logInfo({
+            event: "Maker",
+            params: {
+                address: this.wallet.address,
+                nextNonce: this.addrNonceMutexMap[this.wallet.address].nextNonce,
+            },
+        })
     }
 
     async createMarketMap() {
@@ -80,6 +92,8 @@ export class Maker extends BotService {
 
         const balance = await this.perpService.getUSDCBalance(this.wallet.address)
 
+        this.logInfo({ event: "CheckUSDCBalance", params: { balance: +balance } })
+
         if (balance.gt(0)) {
             await this.approve(this.wallet, balance)
             await this.deposit(this.wallet, balance)
@@ -90,14 +104,20 @@ export class Maker extends BotService {
     }
 
     async stop(): Promise<void> {
+        this.logInfo({ event: "Stop Maker Routine started", params: {} })
         this.active = false
 
         for (const market of Object.values(this.marketMap)) {
+            this.logInfo({ event: "Stop token ", params: { token: market.baseToken } })
+
             await this.reducePosition(market)
             const order = this.marketOrderMap[market.name];
             await this.removeOrder(market, order)
+
+            this.logInfo({ event: "Stop token completed ", params: { token: market.baseToken } })
         }
 
+        this.logInfo({ event: "Stop Maker Routine completed", params: {} })
     }
 
     async makerRoutine() {
@@ -154,6 +174,7 @@ export class Maker extends BotService {
         const totalOpenPositions = Object.keys(this.config.futuresMap || {}).length;
 
         const diff = marketPrice.minus(order.entryPrice).div(order.entryPrice).abs();
+        this.logInfo({ event: "Hedge market diff ", params: { diff: diff, marketPrice: marketPrice.toString(), entryPrice: order.entryPrice.toString() } });
 
         // @ts-ignore
         if (diff.gte(this.config.marketMap[market.name].hedgeActivationDiff) && totalOpenPositions === 0) {
@@ -164,6 +185,8 @@ export class Maker extends BotService {
                 }})
 
             const side = marketPrice.gt(order.entryPrice) ? Side.LONG : Side.SHORT
+            this.logInfo({ event: "Total open positions ", params: { totalOpenPositions }});
+            this.logInfo({ event: "Hedge position side ", params: { side }});
 
             if (+order.baseDebt === 0) {
                 await this.logError({
@@ -226,22 +249,25 @@ export class Maker extends BotService {
 
         // @ts-ignore
         if (this.config.futuresMap && this.config.futuresMap[market.name]) {
+            this.logInfo({ event: "Check open futures to reduce" })
             // @ts-ignore
             const {max, min} = this.config.futuresMap[market.name];
 
             if (marketPrice > max) { // разбить на макс и мин
+                this.logInfo({ event: "Market price is bigger than max", params: { marketPrice, min } })
                 await this.reduceFuturePositions(market, order, marketPrice, {max})
             }
 
             if (marketPrice < min) {
+                this.logInfo({ event: "Market price is bigger than min", params: { marketPrice, min } })
                 await this.reduceFuturePositions(market, order, marketPrice, {min})
             }
         }
     }
 
     async reduceFuturePositions(market: Market, order: OpenOrder, marketPrice: any, params: { [key: string]: any }) {
+        this.logInfo({ event: "Removing liquidity before futures position close", params })
         await this.removeOrder(market, order);
-
         await this.reducePosition(market)
         // @ts-ignore
         delete this.config.futuresMap[market.name]
@@ -259,6 +285,13 @@ export class Maker extends BotService {
         })
 
         await this.closePosition(this.wallet, market.baseToken)
+
+        this.logInfo({
+            event: "Successfully reduce futures position",
+            params: {
+                market: market.name,
+            },
+        })
     }
 
     async refreshOrders(market: Market) {
@@ -269,10 +302,23 @@ export class Maker extends BotService {
 
         switch (openOrders.length) {
             case 0: {
+                this.logInfo({
+                    event: "Create new Order",
+                    params: {
+                        market: market.name,
+                    },
+                })
                 this.marketOrderMap[market.name] = await this.createOrder(market)
                 break
             }
             case 1: {
+                this.logInfo({
+                    event: "Update order",
+                    params: {
+                        market: market.name,
+                    },
+                })
+
                 let marketPrice;
 
                 if (this.marketOrderMap[market.name]) {
@@ -375,6 +421,7 @@ export class Maker extends BotService {
                 lowerPrice: +tickToPrice(openOrder.lowerTick),
             },
         })
+
         await this.removeLiquidity(
             this.wallet,
             market.baseToken,
@@ -440,21 +487,17 @@ const sendDataToElastic = (content: any, date: any, type: any) => {
         type,
     }
 
-   /* fetch('http://127.0.0.1:9200/log/content', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            logMeta,
-            content,
+    try {
+        fetch('http://127.0.0.1:9200/log/content', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                logMeta,
+                content,
+            })
         })
-    })
-        .then((res) => res.json())
-        .then((data) => {
-            console.log(data)
-        })
-        .catch((err) => {
-            console.log('err while send log', err)
-        })*/
+    } catch (e) {
+    }
 }
