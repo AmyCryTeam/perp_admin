@@ -452,7 +452,7 @@ export class Maker extends BotService {
             data: logErrorData,
         })
 
-        sendDataToElastic(logErrorData, date, 'error')
+        // sendDataToElastic(logErrorData, date, 'error')
         return this.log.jerror(logErrorData)
     }
 
@@ -464,7 +464,7 @@ export class Maker extends BotService {
             data: logData,
         })
 
-        sendDataToElastic(logData, date, 'info')
+        // sendDataToElastic(logData, date, 'info')
         return this.log.jinfo(logData)
     }
 
@@ -476,19 +476,19 @@ export class Maker extends BotService {
             data: logData,
         })
 
-        sendDataToElastic(logData, date, 'warn')
+        // sendDataToElastic(logData, date, 'warn')
         return this.log.jwarn(logData)
     }
 }
 
-const sendDataToElastic = (content: any, date: any, type: any) => {
+const sendDataToElastic = async (content: any, date: any, type: any) => {
     const logMeta = {
         date,
         type,
     }
 
     try {
-        fetch('http://127.0.0.1:9200/log/content', {
+        await fetch('http://127.0.0.1:9200/log/content', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
