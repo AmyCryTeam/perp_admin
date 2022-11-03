@@ -6,6 +6,7 @@ export interface Market {
     poolAddr: string
     tickSpacing: number
     imbalanceStartTime: number | null
+    isClosed: boolean
     // config
     // maker
     liquidityAmount: Big

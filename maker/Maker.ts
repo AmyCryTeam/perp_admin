@@ -79,7 +79,8 @@ export class Maker extends BotService {
                 liquidityAmount: Big(market.liquidityAmount),
                 liquidityRangeMultiplier: Big(market.liquidityRangeOffset).add(1),
                 liquidityAdjustMultiplier: Big(market.liquidityAdjustThreshold).add(1),
-                imbalanceStartTime: null
+                imbalanceStartTime: null,
+                isClosed: false
             }
         }
     }
@@ -229,21 +230,16 @@ export class Maker extends BotService {
                 },
             })
 
-            await this.openPosition(
-                this.wallet,
-                market.baseToken,
-                side,
-                AmountType.QUOTE,
-                hedgePositionSize,
-                undefined,
-                Big(this.config?.adjustMaxGasPriceGwei),
-            )
+            const isClosedPosition = this.marketMap[market.name].isClosed;
+
+            setTimeout( () => this.openFuturePositions(market, side, hedgePositionSize),
+                isClosedPosition ? 60000 : 0);
 
             // @ts-ignore
             this.config.futuresMap[market.name] = {
                 min,
                 max,
-                positionEntryPrice: marketPrice,
+                positionEntryPrice: marketPrice
             }
         }
 
@@ -265,10 +261,26 @@ export class Maker extends BotService {
         }
     }
 
+    async openFuturePositions(market: Market, side: Side, hedgePositionSize: Big) {
+        await this.openPosition(
+            this.wallet,
+            market.baseToken,
+            side,
+            AmountType.QUOTE,
+            hedgePositionSize,
+            undefined,
+            // @ts-ignore
+            Big(this.config?.adjustMaxGasPriceGwei))
+            .then(() => this.marketMap[market.name].isClosed = false)
+    }
+
     async reduceFuturePositions(market: Market, order: OpenOrder, marketPrice: any, params: { [key: string]: any }) {
         this.logInfo({ event: "Removing liquidity before futures position close", params })
         await this.removeOrder(market, order);
         await this.reducePosition(market)
+
+        this.marketMap[market.name].isClosed = true;
+
         // @ts-ignore
         delete this.config.futuresMap[market.name]
     }
