@@ -9,13 +9,17 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@next-auth/mongodb-adapter": "^1.1.1",
     "@perp/common": "0.1.12",
     "@perp/sdk-curie": "^1.9.0",
     "bootstrap": "^5.2.0",
     "dotenv": "^16.0.1",
     "dotenv-flow": "^3.2.0",
     "methods": "^1.1.2",
+    "mongodb": "^4.11.0",
+    "mongoose": "^6.7.0",
     "next": "12.2.4",
+    "next-auth": "^4.15.0",
     "react": "18.2.0",
     "react-bootstrap": "^2.4.0",
     "react-bootstrap-icons": "^1.8.4",
