@@ -10,6 +10,14 @@ services:
       - es-net
     ports:
       - 9200:9200
+  mongo:
+    container_name: mongo-container
+    image: mongo
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: password
+    ports:
+      - 8081:8081
 networks:
   es-net:
     driver: bridge

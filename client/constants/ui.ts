@@ -19,3 +19,9 @@ export const BREAKPOINTS: Array<BREAKPOINTS_KEYS> = [
     BREAKPOINTS_KEYS.XS,
     BREAKPOINTS_KEYS.XXS,
 ];
+
+export const enum AUTH_STATUSES {
+    AUTHENTICATED = 'authenticated',
+    LOADING = 'loading',
+    UNAUTHENTICATED = 'unauthenticated'
+}
