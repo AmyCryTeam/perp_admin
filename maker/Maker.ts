@@ -23,8 +23,8 @@ export class Maker extends BotService {
 
     private wallet!: ethers.Wallet
     public marketMap: { [key: string]: Market } = {}
-    private marketOrderMap: { [key: string]: OpenOrder&{entryPrice?: Big} } = {}
-
+    private marketOrderMap: any = {}
+    
     constructor(config: LiquidityBotConfig) {
         super(new PerpService( new L2EthService( new ServerProfile), new ServerProfile), new L2EthService( new ServerProfile), new FtxService, new GraphService(new L2EthService( new ServerProfile)), new SecretsManager(new ServerProfile), new ServerProfile);
         this.config = {...config, futuresMap: {}};
@@ -112,8 +112,8 @@ export class Maker extends BotService {
 
             await this.reducePosition(market)
             const order = this.marketOrderMap[market.name];
-            await this.removeOrder(market, order)
-
+            await this.reduceFuturePositions(market, order, 0, {})
+            
             this.logInfo({ event: "Stop token completed ", params: { token: market.baseToken } })
         }
 
@@ -309,6 +309,7 @@ export class Maker extends BotService {
                     },
                 })
                 this.marketOrderMap[market.name] = await this.createOrder(market)
+                this.marketOrderMap[market.name] = { ...this.marketOrderMap[market.name], canDelete: false}
                 break
             }
             case 1: {
@@ -326,8 +327,8 @@ export class Maker extends BotService {
                 } else {
                     marketPrice = await this.perpService.getMarketPrice(market.poolAddr);
                 }
-
-                this.marketOrderMap[market.name] = { ...openOrders[0], entryPrice: marketPrice };
+                
+                this.marketOrderMap[market.name] = { ...openOrders[0], entryPrice: marketPrice, canDelete: true };
                 break
             }
             default: {
@@ -434,12 +435,12 @@ export class Maker extends BotService {
     }
 
     async adjustLiquidity(market: Market): Promise<void> {
-        const order = this.marketOrderMap[market.name]
-
-        if (!(await this.isValidOrder(market, order))) {
-            await this.removeOrder(market, order)
+        const order: any = this.marketOrderMap[market.name]
+        if (!(await this.isValidOrder(market, order)) && order.canDelete) {
+            await this.reduceFuturePositions(market, order, 0, {})
+            
             const newOpenOrder = await this.createOrder(market)
-
+            
             this.marketOrderMap[market.name] = newOpenOrder
         }
     }
